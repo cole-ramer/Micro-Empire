@@ -1,0 +1,4 @@
+(lang dune 3.18)
+(name micro-empire)
+(sections (lib .) (bin ../../bin) (doc ../../doc/micro-empire))
+(files (lib (META dune-package opam)) (bin (micro-empire)) (doc (README.md)))

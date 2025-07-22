@@ -1,0 +1,4 @@
+(executable
+ (public_name micro-empire)
+ (name main)
+ (libraries async core micro_empire))
