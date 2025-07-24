@@ -29,6 +29,7 @@ let move t (board : Board.t) (direction : Dir.t) : t option =
     ~finish:(fun new_locations_set ->
       Some { t with locations = new_locations_set })
 
+(*-------------------- Testing ------------------*)
 let four_by_four = Board.create ~height:4 ~width:4
 let four_by_three = Board.create ~height:3 ~width:4
 let empty_board = Board.create ~height:0 ~width:0
