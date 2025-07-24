@@ -33,25 +33,12 @@ let four_by_four = Board.create ~height:4 ~width:4
 let four_by_three = Board.create ~height:3 ~width:4
 let empty_board = Board.create ~height:0 ~width:0
 
-let%expect_test "plus sign only able to move right" =
-  let board = four_by_four in
-  let positions =
-    Position.Set.of_list
-      [
-        { x = 1; y = 0 };
-        { x = 0; y = 1 };
-        { x = 1; y = 1 };
-        { x = 2; y = 1 };
-        { x = 0; y = 2 };
-        { x = 1; y = 2 };
-        { x = 2; y = 2 };
-        { x = 1; y = 3 };
-      ]
-  in
+let print_moved_colonies ~(original_positions : Position.Set.t)
+    ~(board : Board.t) =
   let (orignal_colony : t) =
     {
       size = 0;
-      locations = positions;
+      locations = original_positions;
       energy = 0;
       nutrient_absorption_level = 0;
       decay_reduction_level = 0;
@@ -76,13 +63,141 @@ let%expect_test "plus sign only able to move right" =
       print_s [%message "Colony down" (moved_colony.locations : Position.Set.t)]
   | None -> ());
   let colony_up = move orignal_colony board Dir.Up in
-  (match colony_up with
+  match colony_up with
   | Some moved_colony ->
       print_s [%message "Colony up" (moved_colony.locations : Position.Set.t)]
-  | None -> ());
+  | None -> ()
+
+let%expect_test "plus sign only able to move right" =
+  let board = four_by_four in
+  let positions =
+    Position.Set.of_list
+      [
+        { x = 1; y = 0 };
+        { x = 0; y = 1 };
+        { x = 1; y = 1 };
+        { x = 2; y = 1 };
+        { x = 0; y = 2 };
+        { x = 1; y = 2 };
+        { x = 2; y = 2 };
+        { x = 1; y = 3 };
+      ]
+  in
+  print_moved_colonies ~original_positions:positions ~board;
+
   [%expect
     {|
     ("Colony right"
      (moved_colony.locations
       (((x 1) (y 1)) ((x 1) (y 2)) ((x 2) (y 0)) ((x 2) (y 1)) ((x 2) (y 2))
        ((x 2) (y 3)) ((x 3) (y 1)) ((x 3) (y 2))))) |}]
+
+let%expect_test "plus sign only able to move left" =
+  let board = four_by_four in
+  let original_positions =
+    Position.Set.of_list
+      [
+        { x = 2; y = 0 };
+        { x = 1; y = 1 };
+        { x = 2; y = 1 };
+        { x = 3; y = 1 };
+        { x = 1; y = 2 };
+        { x = 2; y = 2 };
+        { x = 3; y = 2 };
+        { x = 2; y = 3 };
+      ]
+  in
+  print_moved_colonies ~original_positions ~board;
+  [%expect
+    {|
+("Colony left"
+ (moved_colony.locations
+  (((x 0) (y 1)) ((x 0) (y 2)) ((x 1) (y 0)) ((x 1) (y 1)) ((x 1) (y 2))
+   ((x 1) (y 3)) ((x 2) (y 1)) ((x 2) (y 2)))))
+|}]
+
+let%expect_test "empty set non-empty board" =
+  let board = four_by_four in
+  let original_positions = Position.Set.empty in
+  print_moved_colonies ~original_positions ~board;
+  [%expect
+    {|
+    ("Colony right" (moved_colony.locations ()))
+    ("Colony left" (moved_colony.locations ()))
+    ("Colony down" (moved_colony.locations ()))
+    ("Colony up" (moved_colony.locations ())) |}]
+
+let%expect_test "empty set empty board" =
+  let board = empty_board in
+  let original_positions = Position.Set.empty in
+  print_moved_colonies ~original_positions ~board;
+  [%expect
+    {|
+    ("Colony right" (moved_colony.locations ()))
+    ("Colony left" (moved_colony.locations ()))
+    ("Colony down" (moved_colony.locations ()))
+    ("Colony up" (moved_colony.locations ())) |}]
+
+let%expect_test "non empty set empty board" =
+  let board = empty_board in
+  let original_positions =
+    Position.Set.of_list
+      [
+        { x = 2; y = 0 };
+        { x = 1; y = 1 };
+        { x = 2; y = 1 };
+        { x = 3; y = 1 };
+        { x = 1; y = 2 };
+        { x = 2; y = 2 };
+        { x = 3; y = 2 };
+        { x = 2; y = 3 };
+      ]
+  in
+  print_moved_colonies ~original_positions ~board;
+  [%expect {||}]
+
+let%expect_test "colony only able to move down" =
+  let board = four_by_four in
+  let original_positions =
+    Position.Set.of_list
+      [
+        { x = 0; y = 0 };
+        { x = 1; y = 0 };
+        { x = 2; y = 0 };
+        { x = 3; y = 0 };
+        { x = 1; y = 1 };
+        { x = 2; y = 1 };
+      ]
+  in
+  print_moved_colonies ~original_positions ~board;
+
+  [%expect
+    {|
+("Colony down"
+ (moved_colony.locations
+  (((x 0) (y 1)) ((x 1) (y 1)) ((x 1) (y 2)) ((x 2) (y 1)) ((x 2) (y 2))
+   ((x 3) (y 1)))))
+|}]
+
+let%expect_test "colony only able to move up" =
+  let board = four_by_four in
+  let original_positions =
+    Position.Set.of_list
+      [
+        { x = 1; y = 2 };
+        { x = 2; y = 2 };
+        { x = 0; y = 3 };
+        { x = 1; y = 3 };
+        { x = 2; y = 3 };
+        { x = 3; y = 3 };
+      ]
+  in
+  print_moved_colonies ~original_positions ~board;
+
+  [%expect
+    {|
+("Colony up"
+ (moved_colony.locations
+  (((x 0) (y 2)) ((x 1) (y 1)) ((x 1) (y 2)) ((x 2) (y 1)) ((x 2) (y 2))
+   ((x 3) (y 2)))))
+|}]
