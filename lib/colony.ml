@@ -22,9 +22,9 @@ let move t (board : Board.t) (direction : Dir.t) : t option =
   Set.fold_until t.locations ~init:Position.Set.empty
     ~f:(fun
         (new_locations_set : Position.Set.t) (current_location : Position.t) ->
-      match Board.is_in_bounds board current_location with
-      | true ->
-          Continue (Set.add new_locations_set (move_function current_location))
+      let possible_new_position = move_function current_location in
+      match Board.is_in_bounds board possible_new_position with
+      | true -> Continue (Set.add new_locations_set possible_new_position)
       | false -> Stop None)
     ~finish:(fun new_locations_set ->
       Some { t with locations = new_locations_set })
@@ -59,13 +59,30 @@ let%expect_test "plus sign only able to move right" =
       movement_level = 0;
     }
   in
-  let colony_right = move orignal_colony four_by_four Dir.Right in
-  let colony_left = move orignal_colony four_by_four Dir.Left in
-  let colony_down = move orignal_colony four_by_four Dir.Down in
-  let colony_up = move orignal_colony four_by_four Dir.Up in
-  print_s
-    [%message
-      (colony_right : t option)
-        (colony_left : t option)
-        (colony_down : t option)
-        (colony_up : t option)]
+  let colony_right = move orignal_colony board Dir.Right in
+  (match colony_right with
+  | Some moved_colony ->
+      print_s
+        [%message "Colony right" (moved_colony.locations : Position.Set.t)]
+  | None -> ());
+  let colony_left = move orignal_colony board Dir.Left in
+  (match colony_left with
+  | Some moved_colony ->
+      print_s [%message "Colony left" (moved_colony.locations : Position.Set.t)]
+  | None -> ());
+  let colony_down = move orignal_colony board Dir.Down in
+  (match colony_down with
+  | Some moved_colony ->
+      print_s [%message "Colony down" (moved_colony.locations : Position.Set.t)]
+  | None -> ());
+  let colony_up = move orignal_colony board Dir.Up in
+  (match colony_up with
+  | Some moved_colony ->
+      print_s [%message "Colony up" (moved_colony.locations : Position.Set.t)]
+  | None -> ());
+  [%expect
+    {|
+    ("Colony right"
+     (moved_colony.locations
+      (((x 1) (y 1)) ((x 1) (y 2)) ((x 2) (y 0)) ((x 2) (y 1)) ((x 2) (y 2))
+       ((x 2) (y 3)) ((x 3) (y 1)) ((x 3) (y 2))))) |}]
