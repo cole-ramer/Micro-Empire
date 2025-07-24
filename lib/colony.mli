@@ -10,3 +10,10 @@ type t = {
   movement_level : Upgrades.Level.t;
 }
 [@@deriving sexp]
+
+(* Takes in a colony, a game board, and a direction to move. 
+Attempts to move all positions in the colony by one in the direction given.
+Returns Some (colony with locations field set to the moved positions). 
+If the colony remains in bounds or None if the move would cause one of 
+the positions to go out of bounds *)
+val move : t -> Board.t -> Dir.t -> t option
