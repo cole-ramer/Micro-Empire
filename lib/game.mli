@@ -4,7 +4,7 @@ type t = {
   player : Colony.t;
   game_state : Game_state.t;
   enemies : Colony.t list;
-  nutrients : Position.t list;
+  nutrients : Position.Set.t;
   board : Board.t;
 }
 
