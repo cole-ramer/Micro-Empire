@@ -19,15 +19,32 @@ let move t (board : Board.t) (direction : Dir.t) : t option =
     | Down -> Position.position_down
     | Up -> Position.position_up
   in
-  Set.fold_until t.locations ~init:Position.Set.empty
-    ~f:(fun
-        (new_locations_set : Position.Set.t) (current_location : Position.t) ->
-      let possible_new_position = move_function current_location in
-      match Board.is_in_bounds board possible_new_position with
-      | true -> Continue (Set.add new_locations_set possible_new_position)
-      | false -> Stop None)
-    ~finish:(fun new_locations_set ->
-      Some { t with locations = new_locations_set })
+  let new_locations_option =
+    Set.fold_until t.locations ~init:Position.Set.empty
+      ~f:(fun
+          (new_locations_set : Position.Set.t)
+          (current_location : Position.t)
+        ->
+        let possible_new_position = move_function current_location in
+        match Board.is_in_bounds board possible_new_position with
+        | true -> Continue (Set.add new_locations_set possible_new_position)
+        | false -> Stop None)
+      ~finish:(fun new_locations_set -> Some new_locations_set)
+  in
+  match new_locations_option with
+  | Some new_locations ->
+      let movement_cost =
+        Upgrades.upgrade_effect ~size:t.size ~level:t.movement_level
+          Upgrades.Movement
+      in
+      let new_energy_total = t.energy - movement_cost in
+      Some
+        {
+          t with
+          locations = new_locations;
+          energy = new_energy_total - movement_cost;
+        }
+  | None -> None
 
 (*-------------------- Testing ------------------*)
 let four_by_four = Board.create ~height:4 ~width:4
