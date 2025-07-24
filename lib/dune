@@ -1,5 +1,5 @@
 (library
- (name micro_empire)
+ (name game_lib)
  (libraries async core graphics)
  (inline_tests)
  (preprocess

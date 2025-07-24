@@ -8,5 +8,5 @@ type t = {
   board : Board.t;
 }
 
-let handle_key game char = match char with 'W' | 'A' | 'S' | 'D' | _ -> game
-let update_environment game = game
+val handle_key : t -> char -> t
+val update_environment : t -> t

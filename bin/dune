@@ -1,4 +1,4 @@
 (executable
  (public_name micro-empire)
  (name main)
- (libraries async core micro_empire))
+ (libraries async core game_lib))
