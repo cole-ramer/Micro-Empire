@@ -1,6 +1,5 @@
 open! Core
 
-
 type t = {
   player : Colony.t;
   game_state : Game_state.t;
@@ -23,7 +22,6 @@ let get_empty_positions (game : t) =
     Set.union game.nutrients all_enemies_set |> Set.union game.player.locations
   in
   Set.diff all_positions_set all_occupied_positions
-;;
 
 let nutrient_replace (game : t) (nutrient_position : Position.t) =
   let possible_positions = get_empty_positions game in
@@ -37,7 +35,25 @@ let nutrient_replace (game : t) (nutrient_position : Position.t) =
     | None -> without_old_nutrient
   in
   { game with nutrients = new_nutrient_position_set }
-;;
 
 let handle_key game char = match char with 'W' | 'A' | 'S' | 'D' | _ -> game
 let update_environment game = game
+
+(*hardcoded before implementation*)
+let create ~width ~height =
+  {
+    player =
+      {
+        size = 3;
+        locations = Position.Set.of_list [ { x = 0; y = 0 } ];
+        energy = 0;
+        nutrient_absorption_level = 1;
+        decay_reduction_level = 1;
+        strength_level = 1;
+        movement_level = 1;
+      };
+    game_state = Game_state.In_progress;
+    enemies = [];
+    nutrients = Position.Set.of_list [ { x = 5; y = 5 } ];
+    board = { width = 10; height = 10 };
+  }

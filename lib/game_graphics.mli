@@ -1,7 +1,6 @@
 open! Core
 
-val init_exn : unit -> unit
-(*should be unit -> game*)
+val init_exn : unit -> Game.t
 
 val render : Game.t -> unit
 

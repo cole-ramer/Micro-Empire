@@ -10,3 +10,4 @@ type t = {
 
 val handle_key : t -> char -> t
 val update_environment : t -> t
+val create : width:int -> height:int -> t

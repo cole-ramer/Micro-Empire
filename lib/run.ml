@@ -33,9 +33,8 @@ let update_environment (game : Game.t) ~game_over =
       | In_progress -> ())
 
 let run () =
-  (* let game = Game_graphics.init_exn () in
+  let game = Game_graphics.init_exn () in
   Game_graphics.render game;
   let game_over = ref false in
   handle_keys game ~game_over;
-  update_environment game ~game_over *)
-  ()
+  update_environment game ~game_over
