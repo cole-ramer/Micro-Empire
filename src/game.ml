@@ -45,7 +45,9 @@ let create ~width ~height =
     player =
       {
         size = 3;
-        locations = Position.Set.of_list [ { x = 0; y = 0 } ];
+        locations =
+          Position.Set.of_list
+            [ { x = 0; y = 0 }; { x = 0; y = 1 }; { x = 1; y = 1 } ];
         energy = 0;
         nutrient_absorption_level = 1;
         decay_reduction_level = 1;
@@ -53,7 +55,25 @@ let create ~width ~height =
         movement_level = 1;
       };
     game_state = Game_state.In_progress;
-    enemies = [];
+    enemies =
+      [
+        {
+          size = 3;
+          locations =
+            Position.Set.of_list
+              [
+                { x = 6; y = 7 };
+                { x = 7; y = 7 };
+                { x = 7; y = 6 };
+                { x = 7; y = 8 };
+              ];
+          energy = 0;
+          nutrient_absorption_level = 1;
+          decay_reduction_level = 1;
+          strength_level = 1;
+          movement_level = 1;
+        };
+      ];
     nutrients = Position.Set.of_list [ { x = 5; y = 5 } ];
     board = { width = 10; height = 10 };
   }
