@@ -145,6 +145,77 @@ let move t (board : Board.t) (direction : Dir.t) : t option =
         }
   | None -> None
 
+let get_upgrade_cost colony (upgrade : Upgrades.t) =
+  match upgrade with
+  | Nutrient_absorption ->
+      Upgrades.upgrade_cost ~level:colony.nutrient_absorption_level upgrade
+  | Decary_reduction ->
+      Upgrades.upgrade_cost ~level:colony.decay_reduction_level upgrade
+  | Movement -> Upgrades.upgrade_cost ~level:colony.movement_level upgrade
+  | Strength -> Upgrades.upgrade_cost ~level:colony.strength_level upgrade
+  | Size -> Upgrades.upgrade_cost ~size:colony.size upgrade
+
+let can_purchase_upgrade colony (upgrade : Upgrades.t) =
+  colony.energy >= get_upgrade_cost colony upgrade
+
+(* Custom option maybe*)
+let upgrade ?(board : Board.t option) colony upgrade =
+  match can_purchase_upgrade colony upgrade with
+  | false -> None
+  | true -> (
+      let upgrade_cost = get_upgrade_cost colony upgrade in
+      let new_energy = colony.energy - upgrade_cost in
+      match upgrade with
+      | Nutrient_absorption ->
+          Some
+            {
+              colony with
+              nutrient_absorption_level = colony.nutrient_absorption_level + 1;
+              energy = new_energy;
+            }
+      | Decary_reduction ->
+          Some
+            {
+              colony with
+              decay_reduction_level = colony.decay_reduction_level + 1;
+              energy = new_energy;
+            }
+      | Movement ->
+          Some
+            {
+              colony with
+              movement_level = colony.movement_level + 1;
+              energy = new_energy;
+            }
+      | Strength ->
+          Some
+            {
+              colony with
+              strength_level = colony.strength_level + 1;
+              energy = new_energy;
+            }
+      | Size -> (
+          match board with
+          | Some b ->
+              let size_increase =
+                Upgrades.upgrade_effect ~size:colony.size upgrade
+              in
+              let new_locations =
+                increase_size colony.locations b ~size_increase
+              in
+              Some
+                {
+                  colony with
+                  locations = new_locations;
+                  energy = new_energy;
+                  size = colony.size + size_increase;
+                }
+          | None ->
+              raise_s
+                [%message
+                  "purchased the increased size upgrade but did not pass in \
+                   board as optional parameter"]))
+
 (*-------------------- Testing ------------------*)
 let four_by_four = Board.create ~height:4 ~width:4
 let four_by_three = Board.create ~height:3 ~width:4
