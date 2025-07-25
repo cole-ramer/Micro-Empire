@@ -7,7 +7,7 @@ end
 type t = Nutrient_absorption | Decary_reduction | Movement | Strength | Size
 [@@deriving sexp]
 
-(* Returns the cost for the given upgrade type depnding on potinally the level and size.
+(* Returns the cost for the given upgrade type depnding on potentially the level and size.
 Here is a guide for when to include the paramaters.
 Size increase -> only pass in size
 everything else -> only pass in level*)
