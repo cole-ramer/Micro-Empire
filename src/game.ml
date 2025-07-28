@@ -116,6 +116,7 @@ module Enviorment = struct
                 player_position
           | false -> current_game)
     in
+
     (* handles consumption for all the enemies*)
     let new_game =
       Map.fold game.enemies ~init:new_game ~f:(fun ~key ~data current_game ->
@@ -135,6 +136,89 @@ module Enviorment = struct
               | false -> current_game))
     in
     new_game
+
+  let two_colonies_overlap ~(colony1 : Colony.t) ~(colony2 : Colony.t) =
+    Set.fold_until colony1.locations ~init:false
+      ~f:(fun do_overlap position_in_colony1 ->
+        match Set.mem colony2.locations position_in_colony1 with
+        | true -> Stop true
+        | false -> Continue false)
+      ~finish:(fun bool -> false)
+
+  let handle_fights_for_one_enemy_colony ~enemy_id ~enemy_colony
+      (current_enemy_map : Colony.t Int.Map.t) : Colony.t Int.Map.t =
+    Map.fold_until current_enemy_map ~init:current_enemy_map
+      ~f:(fun ~key ~data inner_fold_enemy_map ->
+        match
+          ( Map.mem inner_fold_enemy_map key,
+            two_colonies_overlap ~colony1:enemy_colony ~colony2:data )
+        with
+        | _, false | false, _ -> Continue inner_fold_enemy_map
+        | true, true -> (
+            let outer_enemy_result, inner_enemy_result =
+              Colony.fight ~colony1:enemy_colony ~colony2:data
+            in
+            match (outer_enemy_result, inner_enemy_result) with
+            | Some outer_enemy, None ->
+                let without_loser_map = Map.remove inner_fold_enemy_map key in
+                Continue
+                  (Map.set without_loser_map ~key:enemy_id ~data:outer_enemy)
+            | None, Some inner_enemy ->
+                let without_loser_map =
+                  Map.remove inner_fold_enemy_map enemy_id
+                in
+                Stop (Map.set without_loser_map ~key ~data:inner_enemy)
+            | _, _ ->
+                raise_s
+                  [%message
+                    (outer_enemy_result : Colony.t option)
+                      (inner_enemy_result : Colony.t option)
+                      "is an invalid return from Colony.fight, there must be \
+                       exactly one winner"]))
+      ~finish:(fun final_inner_enemy_map -> final_inner_enemy_map)
+
+  let handle_fights game =
+    let enemy_map = game.enemies in
+    let game_after_player_fights =
+      Map.fold enemy_map ~init:game ~f:(fun ~key ~data current_game ->
+          match
+            two_colonies_overlap ~colony1:current_game.player ~colony2:data
+          with
+          | false -> current_game
+          | true -> (
+              let player_result, enemy_colony_result =
+                Colony.fight ~colony1:current_game.player ~colony2:data
+              in
+              match (player_result, enemy_colony_result) with
+              | Some player, None ->
+                  let updated_enemy_map = Map.remove current_game.enemies key in
+                  { current_game with player; enemies = updated_enemy_map }
+              | None, Some enemy ->
+                  {
+                    current_game with
+                    player = Colony.create_empty_colony;
+                    enemies = Map.set current_game.enemies ~key ~data:enemy;
+                    game_state = Game_state.Game_over;
+                  }
+              | _, _ ->
+                  raise_s
+                    [%message
+                      (player_result : Colony.t option)
+                        (enemy_colony_result : Colony.t option)
+                        "is an invalid return from Colony.fight, there must be \
+                         exactly one winner"]))
+    in
+    let new_enemy_map =
+      Map.fold game_after_player_fights.enemies
+        ~init:game_after_player_fights.enemies
+        ~f:(fun ~key ~data current_enemy_map ->
+          match Map.mem current_enemy_map key with
+          | true ->
+              handle_fights_for_one_enemy_colony ~enemy_id:key
+                ~enemy_colony:data current_enemy_map
+          | false -> current_enemy_map)
+    in
+    { game_after_player_fights with enemies = new_enemy_map }
 end
 
 let handle_key game char =

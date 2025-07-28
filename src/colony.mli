@@ -24,7 +24,7 @@ val move : t -> Board.t -> Dir.t -> t option
  adjacent to itself equilivant to the number of overlapping cells between the two colonies (this perserves the combine size).
  The winning colony will be returned as Some {t with updated fields from fight}, and None for the colony that lost.
  The tuple ordering coresponds to the label given in function call -- (result of colony1, result of colony2)*)
-val fight : colony1:t -> colony2:t -> Board.t -> t option * t option
+val fight : colony1:t -> colony2:t -> t option * t option
 
 (* Takes in a colony and upgrade and returns whether 
 the next level for said upgrade type can be purchased*)
