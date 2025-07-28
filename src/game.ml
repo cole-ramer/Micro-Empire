@@ -218,7 +218,15 @@ module Enviorment = struct
                 ~enemy_colony:data current_enemy_map
           | false -> current_enemy_map)
     in
-    { game_after_player_fights with enemies = new_enemy_map }
+    let game_after_fights =
+      { game_after_player_fights with enemies = new_enemy_map }
+    in
+    let num_of_enemies_to_replace =
+      Map.length enemy_map - Map.length new_enemy_map
+    in
+    let placeholder_list = List.init num_of_enemies_to_replace ~f:Fn.id in
+    List.fold placeholder_list ~init:game_after_fights ~f:(fun current_game _ ->
+        Spawning.Enemy.create_new_enemy current_game)
 end
 
 let handle_key game char =
