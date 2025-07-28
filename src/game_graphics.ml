@@ -87,11 +87,25 @@ let render (game : Game.t) =
       "";
       "UPGRADE MUTATIONS";
       "(Press # to Upgrade)";
-      "1. Strength : 10";
-      "2. Size : 10";
-      "4. Free Movement : 10";
-      "5. Nutrient Absorption: 10";
-      "6. Decay Reduction : 10";
+      "1. Strength: "
+      ^ Int.to_string
+          (Upgrades.upgrade_cost ~level:game.player.strength_level
+             Upgrades.Strength);
+      "2. Size : "
+      ^ Int.to_string
+          (Upgrades.upgrade_cost ~size:game.player.size Upgrades.Size);
+      "4. Free Movement : "
+      ^ Int.to_string
+          (Upgrades.upgrade_cost ~level:game.player.movement_level
+             Upgrades.Movement);
+      "5. Nutrient Absorption: "
+      ^ Int.to_string
+          (Upgrades.upgrade_cost ~level:game.player.nutrient_absorption_level
+             Upgrades.Nutrient_absorption);
+      "6. Decay Reduction : "
+      ^ Int.to_string
+          (Upgrades.upgrade_cost ~level:game.player.decay_reduction_level
+             Upgrades.Decay_reduction);
     ]
   in
   Graphics.set_color 0;

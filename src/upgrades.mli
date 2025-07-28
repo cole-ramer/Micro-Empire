@@ -4,7 +4,7 @@ module Level : sig
   type t = int [@@deriving sexp]
 end
 
-type t = Nutrient_absorption | Decary_reduction | Movement | Strength | Size
+type t = Nutrient_absorption | Decay_reduction | Movement | Strength | Size
 [@@deriving sexp]
 
 (* Returns the cost for the given upgrade type depnding on potentially the level and size.

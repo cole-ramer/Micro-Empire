@@ -55,7 +55,7 @@ module Spawning = struct
   end
 
   module Enemy = struct
-    let random_enemy_spawn_size = Random.int 6
+    let random_enemy_spawn_size = Random.int 5 + 1
     let random_enemy_energy spawn_size = Random.int (75 * spawn_size)
 
     let inital_locations set_of_starting_point spawn_size board =
@@ -64,7 +64,10 @@ module Spawning = struct
     let starting_level spawn_size = Random.int ((spawn_size / 10) + 1)
 
     let create_new_enemy game =
-      let possible_starting_position = Set.choose (get_empty_positions game) in
+      let loc_index = Random.int (Set.length (get_empty_positions game)) in
+      let possible_starting_position =
+        Set.nth (get_empty_positions game) loc_index
+      in
       match possible_starting_position with
       | None -> game
       | Some starting_position ->
@@ -97,7 +100,7 @@ module Spawning = struct
   end
 end
 
-module Enviorment = struct
+module Environment = struct
   let check_nutrient_consumptions game =
     let old_nutrient_locations = game.nutrients in
     let new_game =
@@ -154,54 +157,40 @@ let handle_key game char =
       | None -> None)
   | '3' -> upgrade_player Upgrades.Movement
   | '4' -> upgrade_player Upgrades.Nutrient_absorption
-  | '5' -> upgrade_player Upgrades.Decary_reduction
+  | '5' -> upgrade_player Upgrades.Decay_reduction
   | 'w' -> move_player Dir.Up
   | 'a' -> move_player Dir.Left
   | 's' -> move_player Dir.Down
   | 'd' -> move_player Dir.Right
   | _ -> Some game
 
-let update_environment game = game
+let update_environment game = Environment.check_nutrient_consumptions game
 
 (*hardcoded before implementation*)
 let create ~width ~height =
   let creation_id_generator = Creation_id.create () in
-  {
-    player =
-      {
-        size = 3;
-        locations =
-          Position.Set.of_list
-            [ { x = 0; y = 0 }; { x = 0; y = 1 }; { x = 1; y = 1 } ];
-        energy = 10000;
-        nutrient_absorption_level = 1;
-        decay_reduction_level = 1;
-        strength_level = 1;
-        movement_level = 1;
-      };
-    game_state = Game_state.In_progress;
-    enemies =
-      Int.Map.of_alist_exn
-        [
-          ( Creation_id.next_id creation_id_generator,
-            {
-              Colony.size = 3;
-              locations =
-                Position.Set.of_list
-                  [
-                    { x = 6; y = 7 };
-                    { x = 7; y = 7 };
-                    { x = 7; y = 6 };
-                    { x = 7; y = 8 };
-                  ];
-              energy = 10000;
-              nutrient_absorption_level = 1;
-              decay_reduction_level = 1;
-              strength_level = 1;
-              movement_level = 1;
-            } );
-        ];
-    nutrients = Position.Set.of_list [ { x = 5; y = 5 } ];
-    board = { width = 25; height = 22 };
-    creation_id_generator;
-  }
+  let game =
+    {
+      player =
+        {
+          size = 1;
+          locations = Position.Set.of_list [ { x = 0; y = 0 } ];
+          energy = 1000;
+          nutrient_absorption_level = 1;
+          decay_reduction_level = 1;
+          strength_level = 1;
+          movement_level = 1;
+        };
+      game_state = Game_state.In_progress;
+      enemies = Int.Map.empty;
+      nutrients = Position.Set.of_list [ { x = 5; y = 5 } ];
+      board = { width = 25; height = 22 };
+      creation_id_generator;
+    }
+  in
+  let list_of_three = List.init 3 ~f:Fn.id in
+  let game_with_enemies =
+    List.fold list_of_three ~init:game ~f:(fun updated_game _ ->
+        Spawning.Enemy.create_new_enemy updated_game)
+  in
+  Spawning.Nutrient.new_nutrient_positions game_with_enemies

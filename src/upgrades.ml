@@ -4,11 +4,10 @@ module Level = struct
   type t = int [@@deriving sexp]
 end
 
-type t = Nutrient_absorption | Decary_reduction | Movement | Strength | Size
+type t = Nutrient_absorption | Decay_reduction | Movement | Strength | Size
 [@@deriving sexp]
 
-let list_of =
-  [ Nutrient_absorption; Decary_reduction; Movement; Strength; Size ]
+let list_of = [ Nutrient_absorption; Decay_reduction; Movement; Strength; Size ]
 
 module Effect = struct
   let get_num_of_added_cells current_size =
@@ -17,7 +16,7 @@ module Effect = struct
 
     let a = 1.0 in
     let b = 1.0 in
-    int_of_float (Float.round_down (a *. log (b +. s)))
+    int_of_float (Float.round_up (a *. log (b +. s))) 
 
   let nutrient_absorption_gain (level : Level.t) =
     10 + int_of_float (8. *. log (float_of_int (level + 1)))
@@ -74,7 +73,7 @@ end
 let upgrade_cost ?level ?size (upgrade : t) =
   match (upgrade, level, size) with
   | Nutrient_absorption, Some lev, None -> Cost.nutrient_absorption_cost lev
-  | Decary_reduction, Some lev, None -> Cost.decay_reduction_cost lev
+  | Decay_reduction, Some lev, None -> Cost.decay_reduction_cost lev
   | Movement, Some lev, None -> Cost.movement_reduction_cost lev
   | Strength, Some lev, None -> Cost.strength_increase_cost lev
   | Size, None, Some s -> Cost.size_upgrade_cost s
@@ -91,7 +90,7 @@ let upgrade_cost ?level ?size (upgrade : t) =
 let upgrade_effect ?level ?size (upgrade : t) =
   match (upgrade, level, size) with
   | Nutrient_absorption, Some lev, None -> Effect.nutrient_absorption_gain lev
-  | Decary_reduction, Some lev, Some s ->
+  | Decay_reduction, Some lev, Some s ->
       Effect.get_decay_amount ~size:s ~level:lev
   | Movement, Some lev, Some s -> Effect.movement_cost ~size:s ~level:lev
   | Strength, Some lev, Some s -> Effect.get_strength_power ~size:s ~level:lev

@@ -55,7 +55,7 @@ let get_upgrade_cost colony (upgrade : Upgrades.t) =
   match upgrade with
   | Nutrient_absorption ->
       Upgrades.upgrade_cost ~level:colony.nutrient_absorption_level upgrade
-  | Decary_reduction ->
+  | Decay_reduction ->
       Upgrades.upgrade_cost ~level:colony.decay_reduction_level upgrade
   | Movement -> Upgrades.upgrade_cost ~level:colony.movement_level upgrade
   | Strength -> Upgrades.upgrade_cost ~level:colony.strength_level upgrade
@@ -79,7 +79,7 @@ let upgrade ?(board : Board.t option) colony upgrade =
               nutrient_absorption_level = colony.nutrient_absorption_level + 1;
               energy = new_energy;
             }
-      | Decary_reduction ->
+      | Decay_reduction ->
           Some
             {
               colony with
