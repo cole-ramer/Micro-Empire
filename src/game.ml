@@ -23,48 +23,63 @@ let get_empty_positions (game : t) =
   in
   Set.diff all_positions_set all_occupied_positions
 
-let nutrient_replace (game : t) (nutrient_position : Position.t) =
-  let possible_positions = get_empty_positions game in
-  let number_of_possible_positions = Set.length possible_positions in
-  let random_index = Random.int number_of_possible_positions in
-  let new_nutrient_positon_option = Set.nth possible_positions random_index in
-  let without_old_nutrient = Set.remove game.nutrients nutrient_position in
-  let new_nutrient_position_set =
-    match new_nutrient_positon_option with
-    | Some new_nutrient_position -> Set.add game.nutrients new_nutrient_position
-    | None -> without_old_nutrient
-  in
-  { game with nutrients = new_nutrient_position_set }
+module Spawning = struct
+  module Nutrient = struct
+    let random_nutrient_size = Random.int 4
 
-module Enemy_spawning = struct
-  let random_enemy_spawn_size = Random.int 6
-  let random_enemy_energy spawn_size = Random.int (75 * spawn_size)
+    let new_nutrient_positions game =
+      let possible_starting_position = Set.choose (get_empty_positions game) in
+      match possible_starting_position with
+      | None -> game
+      | Some starting_position ->
+          let spawn_size = random_nutrient_size in
+          let inital_set = Set.add Position.Set.empty starting_position in
+          let new_nutrients =
+            Util.expand_randomly inital_set game.board ~size_increase:spawn_size
+          in
+          { game with nutrients = Set.union new_nutrients game.nutrients }
 
-  let inital_locations set_of_starting_point spawn_size board =
-    Util.expand_randomly set_of_starting_point board ~size_increase:spawn_size
+    let nutrient_replace (game : t) (nutrient_position_to_replace : Position.t)
+        =
+      let game_with_new_nutrients = new_nutrient_positions game in
+      {
+        game with
+        nutrients =
+          Set.remove game_with_new_nutrients.nutrients
+            nutrient_position_to_replace;
+      }
+  end
 
-  let starting_level spawn_size = Random.int ((spawn_size / 10) + 1)
+  module Enemy = struct
+    let random_enemy_spawn_size = Random.int 6
+    let random_enemy_energy spawn_size = Random.int (75 * spawn_size)
 
-  let get_starting_enemy game =
-    let possible_starting_position = Set.choose (get_empty_positions game) in
-    match possible_starting_position with
-    | None -> game
-    | Some starting_position ->
-        let spawn_size = random_enemy_spawn_size in
-        let inital_set = Set.add Position.Set.empty starting_position in
-        let new_enemy : Colony.t =
-          {
-            energy = random_enemy_energy spawn_size;
-            size = spawn_size;
-            locations = inital_locations inital_set spawn_size game.board;
-            nutrient_absorption_level = starting_level spawn_size;
-            decay_reduction_level = starting_level spawn_size;
-            movement_level = starting_level spawn_size;
-            strength_level = starting_level spawn_size;
-          }
-        in
-        let new_enemy_list = new_enemy :: game.enemies in
-        { game with enemies = new_enemy_list }
+    let inital_locations set_of_starting_point spawn_size board =
+      Util.expand_randomly set_of_starting_point board ~size_increase:spawn_size
+
+    let starting_level spawn_size = Random.int ((spawn_size / 10) + 1)
+
+    let get_starting_enemy game =
+      let possible_starting_position = Set.choose (get_empty_positions game) in
+      match possible_starting_position with
+      | None -> game
+      | Some starting_position ->
+          let spawn_size = random_enemy_spawn_size in
+          let inital_set = Set.add Position.Set.empty starting_position in
+          let new_enemy : Colony.t =
+            {
+              energy = random_enemy_energy spawn_size;
+              size = spawn_size;
+              locations = inital_locations inital_set spawn_size game.board;
+              nutrient_absorption_level = starting_level spawn_size;
+              decay_reduction_level = starting_level spawn_size;
+              movement_level = starting_level spawn_size;
+              strength_level = starting_level spawn_size;
+            }
+          in
+          let new_enemy_list = new_enemy :: game.enemies in
+          { game with enemies = new_enemy_list }
+  end
 end
 
 let handle_key game char =
