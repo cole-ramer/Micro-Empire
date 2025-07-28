@@ -100,6 +100,7 @@ end
 module Enviorment = struct
   let check_nutrient_consumptions game =
     let old_nutrient_locations = game.nutrients in
+    (* handles consumption for the player *)
     let new_game =
       Set.fold game.player.locations ~init:game
         ~f:(fun current_game player_position ->
@@ -115,6 +116,7 @@ module Enviorment = struct
                 player_position
           | false -> current_game)
     in
+    (* handles consumption for all the enemies*)
     let new_game =
       Map.fold game.enemies ~init:new_game ~f:(fun ~key ~data current_game ->
           Set.fold data.locations ~init:current_game
