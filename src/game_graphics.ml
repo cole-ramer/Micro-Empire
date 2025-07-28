@@ -7,6 +7,7 @@ module Colors = struct
 end
 
 let only_one : bool ref = ref false
+let insufficient_energy_error : int ref = ref 0
 
 module Constants = struct
   let scaling_factor = 1.
@@ -103,7 +104,19 @@ let render (game : Game.t) =
   List.iter key ~f:(fun str ->
       Graphics.draw_string str;
       Graphics.current_y () |> fun y ->
-      Graphics.moveto (play_area_width + 20) (y - 27))
+      Graphics.moveto (play_area_width + 20) (y - 27));
+  Graphics.set_color 10687515;
+  if !insufficient_energy_error > 0 then (
+    Graphics.moveto (play_area_width / 2) (play_area_height - 50);
+    Graphics.draw_string "NOT ENOUGH ENERGY")
+  else ()
 
 let read_key () =
   if Graphics.key_pressed () then Some (Graphics.read_key ()) else None
+
+let set_error duration = insufficient_energy_error := duration
+
+let fade_error_message () =
+  if !insufficient_energy_error > 0 then
+    insufficient_energy_error := !insufficient_energy_error - 1
+  else ()
