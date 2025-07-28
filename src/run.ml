@@ -13,30 +13,33 @@ let every seconds ~f ~stop =
   in
   don't_wait_for (loop ())
 
-let handle_keys (game : Game.t) ~game_over =
+let handle_keys (game : Game.t ref) ~game_over =
   every ~stop:game_over 0.001 ~f:(fun () ->
       match Game_graphics.read_key () with
       | None -> ()
       | Some key -> (
-          match Game.handle_key game key with
-          | Some new_game -> Game_graphics.render new_game
+          match Game.handle_key !game key with
+          | Some new_game ->
+              Game_graphics.render new_game;
+              game := new_game
           | None -> Game_graphics.set_error 20))
 
-let update_environment (game : Game.t) ~game_over =
+let update_environment (game : Game.t ref) ~game_over =
   (* The argument of 0.1 passed to [every] means that every 0.1 seconds, we will call
      [Game.step] and re-render the game. Changing this timespan will allow us to change
      the speed of the game. *)
   every ~stop:game_over 0.1 ~f:(fun () ->
       Game_graphics.fade_error_message ();
-      let new_game = Game.update_environment game in
+      let new_game = Game.update_environment !game in
       Game_graphics.render new_game;
+      game := new_game;
       match (new_game.game_state : Game_state.t) with
       | Game_over -> game_over := true
       | In_progress -> ())
 
 let run () =
-  let game = Game_graphics.init_exn () in
-  Game_graphics.render game;
+  let game : Game.t ref = ref (Game_graphics.init_exn ()) in
+  Game_graphics.render !game;
   let game_over = ref false in
   handle_keys game ~game_over;
   update_environment game ~game_over
