@@ -97,7 +97,16 @@ module Spawning = struct
   end
 end
 
-module Enviorment = struct end
+module Enviorment = struct
+  (* let check_nutrient_consumptions game =
+    let old_nutrient_locations = game.nutrients in
+    let new_game = Set.fold game.player.locations ~init:game ~f:(fun current_game player_position ->
+      match Set.mem old_nutrient_locations player_position with 
+      | true -> Spawning.Nutrient.nutrient_replace game player_position
+      | false -> current_game) in
+  let new_game = Map.fold game.enemies ~init:new_game ~f:(fun ~key ~data current_game ->)  *)
+
+end
 
 let handle_key game char =
   let upgrade_player upgrade =

@@ -34,19 +34,22 @@ let move t (board : Board.t) (direction : Dir.t) : t option =
       ~finish:(fun new_locations_set -> Some new_locations_set)
   in
   match new_locations_option with
-  | Some new_locations ->
+  | Some new_locations -> (
       let movement_cost =
         Upgrades.upgrade_effect ~size:t.size ~level:t.movement_level
           Upgrades.Movement
       in
       let new_energy_total = t.energy - movement_cost in
-      Some
-        {
-          t with
-          locations = new_locations;
-          energy = new_energy_total - movement_cost;
-        }
-  | None -> None
+      match new_energy_total >= 0 with
+      | true ->
+          Some
+            {
+              t with
+              locations = new_locations;
+              energy = new_energy_total - movement_cost;
+            }
+      | false -> None)
+  | None -> Some t
 
 let get_upgrade_cost colony (upgrade : Upgrades.t) =
   match upgrade with
