@@ -38,3 +38,6 @@ Otherwise it will return Some (colony with updated energy and upgrade level).
 NOTE FOR SIZE: size is the only upgrade that requires the Board.t
 Additonally the colony will also have an updated location set for the new cells *)
 val upgrade : ?board:Board.t -> t -> Upgrades.t -> t option
+
+(* Creates a colony with an empty location set, 0 energy, size ,nutrient_absorption_level, etc*)
+val create_empty_colony : t

@@ -36,6 +36,75 @@ let nutrient_replace (game : t) (nutrient_position : Position.t) =
   in
   { game with nutrients = new_nutrient_position_set }
 
+module Enemy_spawning = struct
+  let random_enemy_spawn_size = Random.int 6
+  let random_enemy_energy spawn_size = Random.int (75 * spawn_size)
+
+  let inital_locations set_of_starting_point spawn_size board =
+    Util.expand_randomly set_of_starting_point board
+      ~size_to_increase:spawn_size
+
+  let starting_level spawn_size = Random.int ((spawn_size / 10) + 1)
+
+  let get_starting_enemy game =
+    let possible_starting_position = Set.choose (get_empty_positions game) in
+    match possible_starting_position with
+    | None -> game
+    | Some starting_position ->
+        let spawn_size = random_enemy_spawn_size in
+        let inital_set = Set.add Position.Set.empty starting_position in
+        let new_enemy : Colony.t =
+          {
+            energy = random_enemy_energy spawn_size;
+            size = spawn_size;
+            locations = inital_locations inital_set spawn_size game.board;
+            nutrient_absorption_level = starting_level spawn_size;
+            decay_reduction_level = starting_level spawn_size;
+            movement_level = starting_level spawn_size;
+            strength_level = starting_level spawn_size;
+          }
+        in
+        let new_enemy_list = new_enemy :: game.enemies in
+        { game with enemies = new_enemy_list }
+end
+
+let fight ~(colony1 : Colony.t) ~(colony2 : Colony.t) (board : Board.t) :
+    Colony.t option * Colony.t option =
+  let colony1_power =
+    Upgrades.upgrade_effect ~size:colony1.size ~level:colony1.strength_level
+      Upgrades.Strength
+  in
+  let colony2_power =
+    Upgrades.upgrade_effect ~size:colony2.size ~level:colony2.strength_level
+      Upgrades.Strength
+  in
+  let new_energy = colony1.energy + colony2.energy in
+  let new_size = colony1.size + colony2.size in
+  let combined_locations = Set.union colony1.locations colony2.locations in
+  let new_locations =
+    Util.increase_size combined_locations board
+      ~size_increase:(new_size - Set.length combined_locations)
+  in
+  match colony1_power > colony2_power with
+  | true ->
+      ( Some
+          {
+            colony1 with
+            energy = new_energy;
+            size = new_size;
+            locations = new_locations;
+          },
+        None )
+  | false ->
+      ( None,
+        Some
+          {
+            colony2 with
+            energy = new_energy;
+            size = new_size;
+            locations = new_locations;
+          } )
+
 let handle_key game char = match char with 'W' | 'A' | 'S' | 'D' | _ -> game
 let update_environment game = game
 

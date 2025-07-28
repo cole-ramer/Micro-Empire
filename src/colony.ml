@@ -12,103 +12,6 @@ type t = {
 [@@deriving sexp]
 
 (** Choose m numbers from 0 - n-1*)
-let choose ~amount_to_choose ~amount_to_choose_from =
-  let choices = List.init amount_to_choose_from ~f:Fn.id in
-  List.fold choices ~init:([], amount_to_choose) ~f:(fun (chosen_so_far, m) i ->
-      let choices_left = amount_to_choose_from - i in
-      let rand = Random.int_incl 1 choices_left in
-      if rand <= m then (i :: chosen_so_far, m - 1) else (chosen_so_far, m))
-  |> fst |> Int.Set.of_list
-
-let%expect_test "choose function" =
-  List.init 20 ~f:(fun _ -> ())
-  |> List.iter ~f:(fun () ->
-         print_s
-           [%message
-             (choose ~amount_to_choose:2 ~amount_to_choose_from:6 : Int.Set.t)]);
-  [%expect
-    {|
-    ("choose 2 6" (2 0))
-    ("choose 2 6" (3 0))
-    ("choose 2 6" (1 0))
-    ("choose 2 6" (2 1))
-    ("choose 2 6" (4 1))
-    ("choose 2 6" (5 1))
-    ("choose 2 6" (3 2))
-    ("choose 2 6" (3 2))
-    ("choose 2 6" (4 1))
-    ("choose 2 6" (5 1))
-    ("choose 2 6" (4 3))
-    ("choose 2 6" (5 3))
-    ("choose 2 6" (3 0))
-    ("choose 2 6" (4 0))
-    ("choose 2 6" (3 1))
-    ("choose 2 6" (4 3))
-    ("choose 2 6" (5 1))
-    ("choose 2 6" (3 0))
-    ("choose 2 6" (5 4))
-    ("choose 2 6" (1 0)) |}]
-
-let increase_size (colony_locations : Position.Set.t) (board : Board.t)
-    ~size_increase =
-  let availble_positions =
-    Set.to_list colony_locations
-    |> List.map ~f:(fun colony_position ->
-           Position.adjacent_positions colony_position)
-    |> Position.Set.union_list
-  in
-  let availble_positions =
-    Set.filter availble_positions ~f:(fun possible_position ->
-        (not (Set.mem colony_locations possible_position))
-        && Board.is_in_bounds board possible_position)
-    |> Set.to_list
-  in
-  let new_colony_positions_indexes =
-    choose ~amount_to_choose:size_increase
-      ~amount_to_choose_from:(List.length availble_positions)
-  in
-  let picked_positions =
-    List.filteri availble_positions ~f:(fun index _ ->
-        Set.mem new_colony_positions_indexes index)
-    |> Position.Set.of_list
-  in
-  Set.union picked_positions colony_locations
-
-let fight ~colony1 ~colony2 (board : Board.t) : t option * t option =
-  let colony1_power =
-    Upgrades.upgrade_effect ~size:colony1.size ~level:colony1.strength_level
-      Upgrades.Strength
-  in
-  let colony2_power =
-    Upgrades.upgrade_effect ~size:colony2.size ~level:colony2.strength_level
-      Upgrades.Strength
-  in
-  let new_energy = colony1.energy + colony2.energy in
-  let new_size = colony1.size + colony2.size in
-  let combined_locations = Set.union colony1.locations colony2.locations in
-  let new_locations =
-    increase_size combined_locations board
-      ~size_increase:(new_size - Set.length combined_locations)
-  in
-  match colony1_power > colony2_power with
-  | true ->
-      ( Some
-          {
-            colony1 with
-            energy = new_energy;
-            size = new_size;
-            locations = new_locations;
-          },
-        None )
-  | false ->
-      ( None,
-        Some
-          {
-            colony2 with
-            energy = new_energy;
-            size = new_size;
-            locations = new_locations;
-          } )
 
 let move t (board : Board.t) (direction : Dir.t) : t option =
   let move_function =
@@ -201,7 +104,7 @@ let upgrade ?(board : Board.t option) colony upgrade =
                 Upgrades.upgrade_effect ~size:colony.size upgrade
               in
               let new_locations =
-                increase_size colony.locations b ~size_increase
+                Util.increase_size colony.locations b ~size_increase
               in
               Some
                 {
@@ -215,6 +118,17 @@ let upgrade ?(board : Board.t option) colony upgrade =
                 [%message
                   "purchased the increased size upgrade but did not pass in \
                    board as optional parameter"]))
+
+let create_empty_colony =
+  {
+    energy = 0;
+    size = 0;
+    locations = Position.Set.empty;
+    nutrient_absorption_level = 0;
+    decay_reduction_level = 0;
+    movement_level = 0;
+    strength_level = 0;
+  }
 
 (*-------------------- Testing ------------------*)
 let four_by_four = Board.create ~height:4 ~width:4
