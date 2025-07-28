@@ -173,7 +173,7 @@ let create ~width ~height =
         locations =
           Position.Set.of_list
             [ { x = 0; y = 0 }; { x = 0; y = 1 }; { x = 1; y = 1 } ];
-        energy = 1000;
+        energy = 10000;
         nutrient_absorption_level = 1;
         decay_reduction_level = 1;
         strength_level = 1;
