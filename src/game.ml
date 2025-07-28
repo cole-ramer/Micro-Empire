@@ -97,6 +97,8 @@ module Spawning = struct
   end
 end
 
+module Enviorment = struct end
+
 let handle_key game char =
   let upgrade_player upgrade =
     match Colony.upgrade game.player upgrade with
