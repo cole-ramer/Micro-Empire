@@ -67,7 +67,28 @@ module Enemy_spawning = struct
         { game with enemies = new_enemy_list }
 end
 
-let handle_key game char = match char with 'W' | 'A' | 'S' | 'D' | _ -> game
+let handle_key game char =
+  let upgrade_player upgrade =
+    { game with player = Option.value_exn (Colony.upgrade game.player upgrade) }
+  in
+  let move_player direction =
+    {
+      game with
+      player = Option.value_exn (Colony.move game.player game.board direction);
+    }
+  in
+  match char with
+  | '1' -> upgrade_player Upgrades.Strength
+  | '2' -> upgrade_player Upgrades.Size
+  | '3' -> upgrade_player Upgrades.Movement
+  | '4' -> upgrade_player Upgrades.Nutrient_absorption
+  | '5' -> upgrade_player Upgrades.Decary_reduction
+  | 'W' -> move_player Dir.Up
+  | 'A' -> move_player Dir.Left
+  | 'S' -> move_player Dir.Down
+  | 'D' -> move_player Dir.Right
+  | _ -> game
+
 let update_environment game = game
 
 (*hardcoded before implementation*)
