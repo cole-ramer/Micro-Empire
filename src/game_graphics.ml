@@ -21,15 +21,16 @@ let draw_block { Position.x; y } ~color =
   let draw_area x_start y_start input_block_size ~input_color =
     Graphics.set_color input_color;
     let x1, y1, x2, y2 =
-      ( x_start + 1,
-        y_start + 1,
-        input_block_size - 1,
-        input_block_size - 1 )
+      (x_start + 1, y_start + 1, input_block_size - 1, input_block_size - 1)
     in
     Graphics.fill_rect x1 y1 x2 y2
   in
   draw_area (x * block_size) (y * block_size) block_size ~input_color:color;
-  let decor_boxes = [ (1, 1, 10000); (3, 5, 20000); (6, 6, 13000); (5, 3, -6000); (7, 1, 15000); ] in
+  let decor_boxes =
+    [
+      (1, 1, 10000); (3, 5, 20000); (6, 6, 13000); (5, 3, -6000); (7, 1, 15000);
+    ]
+  in
   let decor_size = block_size / 9 in
   List.iter decor_boxes ~f:(fun (x_off, y_off, color_off) ->
       draw_area
@@ -60,9 +61,14 @@ let render (game : Game.t) =
           draw_block { x; y } ~color:10687515));
   Set.iter game.nutrients ~f:(fun { x; y } ->
       draw_block { x; y } ~color:15248896);
-  draw_block { x=(play_area_width / block_size + 3); y=(play_area_height / block_size - 2) } ~color:1352489;
-  draw_block { x=(play_area_width / block_size + 6); y=3 } ~color:15248896;
-  draw_block { x=(play_area_width / block_size + 6); y=1  } ~color:10687515;
+  draw_block
+    {
+      x = (play_area_width / block_size) + 3;
+      y = (play_area_height / block_size) - 2;
+    }
+    ~color:1352489;
+  draw_block { x = (play_area_width / block_size) + 5; y = 4 } ~color:15248896;
+  draw_block { x = (play_area_width / block_size) + 5; y = 2 } ~color:10687515;
   let player = game.player in
   let text =
     [
@@ -76,18 +82,13 @@ let render (game : Game.t) =
       "Decay Reduction: Level " ^ Int.to_string player.decay_reduction_level;
       "Movement: Level " ^ Int.to_string player.movement_level;
       "";
-      "";
-      "UPGRADES";
-      "STRENGTH : 10";
-      "SIZE : 10";
-      "ENERGY REGEN : 10";
-      "FREE MOVEMENT : 10";
-      "NUTRIENT ABSORP: 10";
-      "DECAY REDUCTION : 10";
-      "";
-      "   NUTRIENT : ";
-      "";
-      "   ENEMY BACTERIA : ";
+      "UPGRADE MUTATIONS";
+      "(Press # to Upgrade)";
+      "1. Strength : 10";
+      "2. Size : 10";
+      "4. Free Movement : 10";
+      "5. Nutrient Absorption: 10";
+      "6. Decay Reduction : 10";
     ]
   in
   Graphics.set_color 0;
@@ -95,7 +96,13 @@ let render (game : Game.t) =
   List.iter text ~f:(fun str ->
       Graphics.draw_string str;
       Graphics.current_y () |> fun y ->
-      Graphics.moveto (play_area_width + 20) (y - 25))
+      Graphics.moveto (play_area_width + 20) (y - 25));
+  let key = [ "  NUTRIENT : "; ""; "  ENEMY BACTERIA : " ] in
+  Graphics.moveto (play_area_width + 20) (119);
+  List.iter key ~f:(fun str ->
+      Graphics.draw_string str;
+      Graphics.current_y () |> fun y ->
+      Graphics.moveto (play_area_width + 20) (y - 27))
 
 let read_key () =
   if Graphics.key_pressed () then Some (Graphics.read_key ()) else None
