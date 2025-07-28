@@ -15,7 +15,7 @@ module Effect = struct
     let open Float in
     let s = float_of_int current_size in
 
-    let a = 10.0 in
+    let a = 1.0 in
     let b = 1.0 in
     int_of_float (Float.round_down (a *. log (b +. s)))
 
