@@ -49,6 +49,7 @@ let init_exn () =
   let width = play_area_width / block_size in
   Graphics.set_window_title "Micro Empire";
   Graphics.set_text_size (15. *. scaling_factor |> Float.iround_down_exn);
+  Graphics.auto_synchronize false;
   Game.create ~height ~width
 
 let render (game : Game.t) =
@@ -108,8 +109,8 @@ let render (game : Game.t) =
   Graphics.set_color 10687515;
   if !insufficient_energy_error > 0 then (
     Graphics.moveto (play_area_width / 2) (play_area_height - 50);
-    Graphics.draw_string "NOT ENOUGH ENERGY")
-  else ()
+    Graphics.draw_string "NOT ENOUGH ENERGY");
+  Graphics.synchronize ()
 
 let read_key () =
   if Graphics.key_pressed () then Some (Graphics.read_key ()) else None
