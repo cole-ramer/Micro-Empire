@@ -57,7 +57,7 @@ let render (game : Game.t) =
   Graphics.fill_rect 0 0 play_area_width play_area_height;
   Set.iter game.player.locations ~f:(fun { x; y } ->
       draw_block { x; y } ~color:1352489);
-  List.iter game.enemies ~f:(fun enemy ->
+  Map.iter game.enemies ~f:(fun enemy ->
       Set.iter enemy.locations ~f:(fun { x; y } ->
           draw_block { x; y } ~color:10687515));
   Set.iter game.nutrients ~f:(fun { x; y } ->
@@ -99,7 +99,7 @@ let render (game : Game.t) =
       Graphics.current_y () |> fun y ->
       Graphics.moveto (play_area_width + 20) (y - 25));
   let key = [ "  NUTRIENT : "; ""; "  ENEMY BACTERIA : " ] in
-  Graphics.moveto (play_area_width + 20) (119);
+  Graphics.moveto (play_area_width + 20) 119;
   List.iter key ~f:(fun str ->
       Graphics.draw_string str;
       Graphics.current_y () |> fun y ->

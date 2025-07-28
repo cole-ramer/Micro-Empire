@@ -3,9 +3,10 @@ open! Core
 type t = {
   player : Colony.t;
   game_state : Game_state.t;
-  enemies : Colony.t list;
+  enemies : Colony.t Int.Map.t;
   nutrients : Position.Set.t;
   board : Board.t;
+  creation_id_generator : Creation_id.t;
 }
 
 let get_empty_positions (game : t) =
@@ -14,9 +15,12 @@ let get_empty_positions (game : t) =
         List.init game.board.height ~f:(fun y -> { Position.x; y }))
     |> List.concat |> Position.Set.of_list
   in
+  (* ask tas*)
   let all_enemies_set =
-    List.map game.enemies ~f:(fun enemy -> enemy.locations)
-    |> Position.Set.union_list
+    Map.fold game.enemies ~init:Position.Set.empty
+      ~f:(fun ~key ~data current_enemy_positions ->
+        ignore key;
+        Set.union current_enemy_positions data.locations)
   in
   let all_occupied_positions =
     Set.union game.nutrients all_enemies_set |> Set.union game.player.locations
@@ -77,8 +81,12 @@ module Spawning = struct
               strength_level = starting_level spawn_size;
             }
           in
-          let new_enemy_list = new_enemy :: game.enemies in
-          { game with enemies = new_enemy_list }
+          let new_enemy_map =
+            Map.add_exn game.enemies
+              ~key:(Creation_id.next_id game.creation_id_generator)
+              ~data:new_enemy
+          in
+          { game with enemies = new_enemy_map }
   end
 end
 
@@ -112,6 +120,7 @@ let update_environment game = game
 
 (*hardcoded before implementation*)
 let create ~width ~height =
+  let creation_id_generator = Creation_id.create () in
   {
     player =
       {
@@ -127,24 +136,27 @@ let create ~width ~height =
       };
     game_state = Game_state.In_progress;
     enemies =
-      [
-        {
-          size = 3;
-          locations =
-            Position.Set.of_list
-              [
-                { x = 6; y = 7 };
-                { x = 7; y = 7 };
-                { x = 7; y = 6 };
-                { x = 7; y = 8 };
-              ];
-          energy = 10000;
-          nutrient_absorption_level = 1;
-          decay_reduction_level = 1;
-          strength_level = 1;
-          movement_level = 1;
-        };
-      ];
+      Int.Map.of_alist_exn
+        [
+          ( Creation_id.next_id creation_id_generator,
+            {
+              Colony.size = 3;
+              locations =
+                Position.Set.of_list
+                  [
+                    { x = 6; y = 7 };
+                    { x = 7; y = 7 };
+                    { x = 7; y = 6 };
+                    { x = 7; y = 8 };
+                  ];
+              energy = 10000;
+              nutrient_absorption_level = 1;
+              decay_reduction_level = 1;
+              strength_level = 1;
+              movement_level = 1;
+            } );
+        ];
     nutrients = Position.Set.of_list [ { x = 5; y = 5 } ];
     board = { width = 10; height = 10 };
+    creation_id_generator;
   }
