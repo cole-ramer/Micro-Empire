@@ -159,6 +159,13 @@ let fight ~(colony1 : t) ~(colony2 : t) (board : Board.t) : t option * t option
             locations = new_locations;
           } )
 
+let consume_nutrient colony =
+  let energy_increase =
+    Upgrades.upgrade_effect ~level:colony.nutrient_absorption_level
+      Upgrades.Nutrient_absorption
+  in
+  { colony with energy = colony.energy + energy_increase }
+
 let create_empty_colony =
   {
     energy = 0;

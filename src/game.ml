@@ -98,14 +98,41 @@ module Spawning = struct
 end
 
 module Enviorment = struct
-  (* let check_nutrient_consumptions game =
+  let check_nutrient_consumptions game =
     let old_nutrient_locations = game.nutrients in
-    let new_game = Set.fold game.player.locations ~init:game ~f:(fun current_game player_position ->
-      match Set.mem old_nutrient_locations player_position with 
-      | true -> Spawning.Nutrient.nutrient_replace game player_position
-      | false -> current_game) in
-  let new_game = Map.fold game.enemies ~init:new_game ~f:(fun ~key ~data current_game ->)  *)
-
+    let new_game =
+      Set.fold game.player.locations ~init:game
+        ~f:(fun current_game player_position ->
+          match Set.mem old_nutrient_locations player_position with
+          | true ->
+              let game_with_nutrient_consumption =
+                {
+                  current_game with
+                  player = Colony.consume_nutrient current_game.player;
+                }
+              in
+              Spawning.Nutrient.nutrient_replace game_with_nutrient_consumption
+                player_position
+          | false -> current_game)
+    in
+    let new_game =
+      Map.fold game.enemies ~init:new_game ~f:(fun ~key ~data current_game ->
+          Set.fold data.locations ~init:current_game
+            ~f:(fun current_game enemy_position ->
+              match Set.mem old_nutrient_locations enemy_position with
+              | true ->
+                  let energized_enemy = Colony.consume_nutrient data in
+                  let new_enemy_map =
+                    Map.set current_game.enemies ~key ~data:energized_enemy
+                  in
+                  let game_with_nutrient_consumption =
+                    { current_game with enemies = new_enemy_map }
+                  in
+                  Spawning.Nutrient.nutrient_replace
+                    game_with_nutrient_consumption enemy_position
+              | false -> current_game))
+    in
+    new_game
 end
 
 let handle_key game char =

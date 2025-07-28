@@ -15,10 +15,8 @@ type t = {
 Attempts to move all positions in the colony by one in the direction given.
 Returns Some (colony with locations field set to the moved positions,
  and energy field updated with the cost of the movement). 
-If the colony remains in bounds or None if the move would cause one of 
-the positions to go out of bounds.
-NOTE: move does allow for the energy field to go or remain negative
-because of the cost of the move. The caller should handle such case *)
+If the colony goes out of bounds it will return the colony unchanged.
+If the colony can not afford the move it will return None *)
 val move : t -> Board.t -> Dir.t -> t option
 
 (* Takes in two colonies and handles the fight logic between them based on their size, strength level, and a bit of randomness.
@@ -41,3 +39,6 @@ val upgrade : ?board:Board.t -> t -> Upgrades.t -> t option
 
 (* Creates a colony with an empty location set, 0 energy, size ,nutrient_absorption_level, etc*)
 val create_empty_colony : t
+
+(* Returns a colony with increased energy level from consuming the nutrient *)
+val consume_nutrient : t -> t
