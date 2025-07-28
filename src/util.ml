@@ -63,11 +63,10 @@ let increase_size (colony_locations : Position.Set.t) (board : Board.t)
   Set.union picked_positions colony_locations
 
 let rec expand_randomly (current_locations : Position.Set.t) (board : Board.t)
-    ~size_to_increase =
-  if size_to_increase = 0 then current_locations
+    ~size_increase =
+  if size_increase = 0 then current_locations
   else
     let current_locations =
       increase_size current_locations board ~size_increase:1
     in
-    expand_randomly current_locations board
-      ~size_to_increase:(size_to_increase - 1)
+    expand_randomly current_locations board ~size_increase:(size_increase - 1)

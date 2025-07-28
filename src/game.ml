@@ -41,8 +41,7 @@ module Enemy_spawning = struct
   let random_enemy_energy spawn_size = Random.int (75 * spawn_size)
 
   let inital_locations set_of_starting_point spawn_size board =
-    Util.expand_randomly set_of_starting_point board
-      ~size_to_increase:spawn_size
+    Util.expand_randomly set_of_starting_point board ~size_increase:spawn_size
 
   let starting_level spawn_size = Random.int ((spawn_size / 10) + 1)
 
@@ -67,43 +66,6 @@ module Enemy_spawning = struct
         let new_enemy_list = new_enemy :: game.enemies in
         { game with enemies = new_enemy_list }
 end
-
-let fight ~(colony1 : Colony.t) ~(colony2 : Colony.t) (board : Board.t) :
-    Colony.t option * Colony.t option =
-  let colony1_power =
-    Upgrades.upgrade_effect ~size:colony1.size ~level:colony1.strength_level
-      Upgrades.Strength
-  in
-  let colony2_power =
-    Upgrades.upgrade_effect ~size:colony2.size ~level:colony2.strength_level
-      Upgrades.Strength
-  in
-  let new_energy = colony1.energy + colony2.energy in
-  let new_size = colony1.size + colony2.size in
-  let combined_locations = Set.union colony1.locations colony2.locations in
-  let new_locations =
-    Util.increase_size combined_locations board
-      ~size_increase:(new_size - Set.length combined_locations)
-  in
-  match colony1_power > colony2_power with
-  | true ->
-      ( Some
-          {
-            colony1 with
-            energy = new_energy;
-            size = new_size;
-            locations = new_locations;
-          },
-        None )
-  | false ->
-      ( None,
-        Some
-          {
-            colony2 with
-            energy = new_energy;
-            size = new_size;
-            locations = new_locations;
-          } )
 
 let handle_key game char = match char with 'W' | 'A' | 'S' | 'D' | _ -> game
 let update_environment game = game

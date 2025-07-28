@@ -119,6 +119,43 @@ let upgrade ?(board : Board.t option) colony upgrade =
                   "purchased the increased size upgrade but did not pass in \
                    board as optional parameter"]))
 
+let fight ~(colony1 : t) ~(colony2 : t) (board : Board.t) : t option * t option
+    =
+  let colony1_power =
+    Upgrades.upgrade_effect ~size:colony1.size ~level:colony1.strength_level
+      Upgrades.Strength
+  in
+  let colony2_power =
+    Upgrades.upgrade_effect ~size:colony2.size ~level:colony2.strength_level
+      Upgrades.Strength
+  in
+  let new_energy = colony1.energy + colony2.energy in
+  let new_size = colony1.size + colony2.size in
+  let combined_locations = Set.union colony1.locations colony2.locations in
+  let new_locations =
+    Util.increase_size combined_locations board
+      ~size_increase:(new_size - Set.length combined_locations)
+  in
+  match colony1_power > colony2_power with
+  | true ->
+      ( Some
+          {
+            colony1 with
+            energy = new_energy;
+            size = new_size;
+            locations = new_locations;
+          },
+        None )
+  | false ->
+      ( None,
+        Some
+          {
+            colony2 with
+            energy = new_energy;
+            size = new_size;
+            locations = new_locations;
+          } )
+
 let create_empty_colony =
   {
     energy = 0;
