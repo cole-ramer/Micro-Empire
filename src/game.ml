@@ -182,6 +182,7 @@ module Environment = struct
 
   let handle_fights game =
     let enemy_map = game.enemies in
+    (* Player vs Enemy fights*)
     let game_after_player_fights =
       Map.fold enemy_map ~init:game ~f:(fun ~key ~data current_game ->
           match
@@ -211,6 +212,7 @@ module Environment = struct
                         "is an invalid return from Colony.fight, there must be \
                          exactly one winner"]))
     in
+    (* All enemy vs. enemy fights*)
     let new_enemy_map =
       Map.fold game_after_player_fights.enemies
         ~init:game_after_player_fights.enemies
@@ -224,6 +226,7 @@ module Environment = struct
     let game_after_fights =
       { game_after_player_fights with enemies = new_enemy_map }
     in
+    (* Replaces defeated colonies *)
     let num_of_enemies_to_replace =
       Map.length enemy_map - Map.length new_enemy_map
     in
