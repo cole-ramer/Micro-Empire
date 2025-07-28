@@ -69,25 +69,29 @@ end
 
 let handle_key game char =
   let upgrade_player upgrade =
-    { game with player = Option.value_exn (Colony.upgrade game.player upgrade) }
+    match Colony.upgrade game.player upgrade with
+    | Some upgraded_colony -> Some { game with player = upgraded_colony }
+    | None -> None
   in
   let move_player direction =
-    {
-      game with
-      player = Option.value_exn (Colony.move game.player game.board direction);
-    }
+    match Colony.move game.player game.board direction with
+    | Some moved_colony -> Some { game with player = moved_colony }
+    | None -> None
   in
   match char with
   | '1' -> upgrade_player Upgrades.Strength
-  | '2' -> upgrade_player Upgrades.Size
+  | '2' -> (
+      match Colony.upgrade ~board:game.board game.player Upgrades.Size with
+      | Some upgraded_size -> Some { game with player = upgraded_size }
+      | None -> None)
   | '3' -> upgrade_player Upgrades.Movement
   | '4' -> upgrade_player Upgrades.Nutrient_absorption
   | '5' -> upgrade_player Upgrades.Decary_reduction
-  | 'W' -> move_player Dir.Up
-  | 'A' -> move_player Dir.Left
-  | 'S' -> move_player Dir.Down
-  | 'D' -> move_player Dir.Right
-  | _ -> game
+  | 'w' -> move_player Dir.Up
+  | 'a' -> move_player Dir.Left
+  | 's' -> move_player Dir.Down
+  | 'd' -> move_player Dir.Right
+  | _ -> Some game
 
 let update_environment game = game
 
@@ -100,7 +104,7 @@ let create ~width ~height =
         locations =
           Position.Set.of_list
             [ { x = 0; y = 0 }; { x = 0; y = 1 }; { x = 1; y = 1 } ];
-        energy = 0;
+        energy = 1000;
         nutrient_absorption_level = 1;
         decay_reduction_level = 1;
         strength_level = 1;
@@ -119,7 +123,7 @@ let create ~width ~height =
                 { x = 7; y = 6 };
                 { x = 7; y = 8 };
               ];
-          energy = 0;
+          energy = 10000;
           nutrient_absorption_level = 1;
           decay_reduction_level = 1;
           strength_level = 1;

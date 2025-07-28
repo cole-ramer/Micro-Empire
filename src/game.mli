@@ -8,6 +8,6 @@ type t = {
   board : Board.t;
 }
 
-val handle_key : t -> char -> t
+val handle_key : t -> char -> t option
 val update_environment : t -> t
 val create : width:int -> height:int -> t

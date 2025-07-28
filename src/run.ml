@@ -17,9 +17,10 @@ let handle_keys (game : Game.t) ~game_over =
   every ~stop:game_over 0.001 ~f:(fun () ->
       match Game_graphics.read_key () with
       | None -> ()
-      | Some key ->
-          let new_game = Game.handle_key game key in
-          Game_graphics.render new_game)
+      | Some key -> (
+          match Game.handle_key game key with
+          | Some new_game -> Game_graphics.render new_game
+          | None -> ()))
 
 let update_environment (game : Game.t) ~game_over =
   (* The argument of 0.1 passed to [every] means that every 0.1 seconds, we will call

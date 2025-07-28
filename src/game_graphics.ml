@@ -51,6 +51,7 @@ let init_exn () =
   Game.create ~height ~width
 
 let render (game : Game.t) =
+  Graphics.clear_graph ();
   let open Constants in
   Graphics.set_color 0;
   Graphics.fill_rect 0 0 play_area_width play_area_height;
