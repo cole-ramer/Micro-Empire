@@ -175,6 +175,6 @@ let create ~width ~height =
             } );
         ];
     nutrients = Position.Set.of_list [ { x = 5; y = 5 } ];
-    board = { width = 10; height = 10 };
+    board = { width = 25; height = 22 };
     creation_id_generator;
   }
