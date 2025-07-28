@@ -20,13 +20,14 @@ let handle_keys (game : Game.t) ~game_over =
       | Some key -> (
           match Game.handle_key game key with
           | Some new_game -> Game_graphics.render new_game
-          | None -> ()))
+          | None -> Game_graphics.set_error 20))
 
 let update_environment (game : Game.t) ~game_over =
   (* The argument of 0.1 passed to [every] means that every 0.1 seconds, we will call
      [Game.step] and re-render the game. Changing this timespan will allow us to change
      the speed of the game. *)
   every ~stop:game_over 0.1 ~f:(fun () ->
+      Game_graphics.fade_error_message ();
       let new_game = Game.update_environment game in
       Game_graphics.render new_game;
       match (new_game.game_state : Game_state.t) with
