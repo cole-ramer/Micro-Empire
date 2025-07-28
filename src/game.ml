@@ -63,7 +63,7 @@ module Spawning = struct
 
     let starting_level spawn_size = Random.int ((spawn_size / 10) + 1)
 
-    let get_starting_enemy game =
+    let create_new_enemy game =
       let possible_starting_position = Set.choose (get_empty_positions game) in
       match possible_starting_position with
       | None -> game
@@ -87,6 +87,13 @@ module Spawning = struct
               ~data:new_enemy
           in
           { game with enemies = new_enemy_map }
+
+    let enemey_replace game ~(enemy_id_to_remove : int) =
+      let game_with_new_enemy = create_new_enemy game in
+      {
+        game with
+        enemies = Map.remove game_with_new_enemy.enemies enemy_id_to_remove;
+      }
   end
 end
 
