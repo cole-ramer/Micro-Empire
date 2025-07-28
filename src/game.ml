@@ -32,7 +32,10 @@ module Spawning = struct
     let random_nutrient_size = Random.int 4
 
     let new_nutrient_positions game =
-      let possible_starting_position = Set.choose (get_empty_positions game) in
+      let empty_positions = get_empty_positions game in
+      let loc_index = Random.int (Set.length empty_positions) in
+      let possible_starting_position = Set.nth empty_positions loc_index in
+
       match possible_starting_position with
       | None -> game
       | Some starting_position ->
