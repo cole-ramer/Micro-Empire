@@ -286,18 +286,21 @@ let evaluate game =
 let handle_key game char =
   let upgrade_player upgrade =
     match Colony.upgrade game.player upgrade with
-    | Some upgraded_colony -> Some { game with player = upgraded_colony }
+    | Some upgraded_colony ->
+        Some (evaluate { game with player = upgraded_colony })
     | None -> None
   in
   let move_player direction =
     match Colony.move game.player game.board direction with
     | Some moved_colony -> Some { game with player = moved_colony }
-    | None -> None
+    | None ->
+        Some { game with game_state = Game_over "GAME OVER: No energy left" }
   in
   match char with
   | '1' -> (
       match Colony.upgrade ~board:game.board game.player Upgrades.Size with
-      | Some upgraded_size -> Some { game with player = upgraded_size }
+      | Some upgraded_size ->
+          Some (evaluate { game with player = upgraded_size })
       | None -> None)
   | '2' -> upgrade_player Upgrades.Strength
   | '3' -> upgrade_player Upgrades.Movement
@@ -307,7 +310,7 @@ let handle_key game char =
   | 'a' -> move_player Dir.Left
   | 's' -> move_player Dir.Down
   | 'd' -> move_player Dir.Right
-  | _ -> Some game
+  | _ -> Some (evaluate game)
 
 let update_environment game =
   let nutrients_consumed = Environment.check_nutrient_consumptions game in
