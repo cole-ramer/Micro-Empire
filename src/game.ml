@@ -66,7 +66,7 @@ module Spawning = struct
   end
 
   module Enemy = struct
-    let random_enemy_spawn_size player_size = Random.int player_size + 1
+    let random_enemy_spawn_size player_size = Random.int (player_size * 2) + 1
     let random_enemy_energy spawn_size = Random.int (75 * spawn_size)
 
     let initial_locations set_of_starting_point spawn_size board =

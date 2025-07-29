@@ -128,7 +128,7 @@ let render (game : Game.t) =
         Graphics.draw_string "NOT ENOUGH ENERGY"
   | Game_over reason ->
       Graphics.moveto (play_area_width / 2) (play_area_height - 50);
-      Graphics.draw_string ("GAME OVER - " ^ reason));
+      Graphics.draw_string reason);
   Graphics.synchronize ()
 
 let read_key () =
