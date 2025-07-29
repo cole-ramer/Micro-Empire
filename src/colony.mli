@@ -43,5 +43,5 @@ val create_empty_colony : ?peak_size:int -> unit -> t
 
 (* Returns a colony with increased energy level from consuming the nutrient *)
 val consume_nutrient : t -> t
-
+val decay : t -> t
 val center : t -> Position.t

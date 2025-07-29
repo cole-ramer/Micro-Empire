@@ -169,6 +169,17 @@ let consume_nutrient colony =
   in
   { colony with energy = colony.energy + energy_increase }
 
+let decay colony =
+  let decay_amount =
+    Upgrades.upgrade_effect ~level:colony.decay_reduction_level
+      ~size:colony.size Upgrades.Decay_reduction
+  in
+  let new_locations =
+    Util.shrink_randomly colony.locations ~size_decrease:decay_amount
+  in
+  let new_size = Set.length new_locations in
+  { colony with locations = new_locations; size = new_size }
+
 let create_empty_colony ?peak_size () =
   let peak_size = match peak_size with None -> 0 | Some size -> size in
   {
