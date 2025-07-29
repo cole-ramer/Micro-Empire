@@ -182,6 +182,17 @@ let create_empty_colony ?peak_size () =
     peak_size;
   }
 
+let center t =
+  if Set.length t.locations = 0 then { Position.x = 0; y = 0 }
+  else
+    let first = Option.value_exn (Set.nth t.locations 0) in
+    let xmin, xmax, ymin, ymax =
+      Set.fold t.locations ~init:(first.x, first.x, first.y, first.y)
+        ~f:(fun (xmin, xmax, ymin, ymax) { Position.x; Position.y } ->
+          (min xmin x, max xmax x, min ymin y, max ymax y))
+    in
+    { Position.x = (xmin + xmax) / 2; y = (ymin + ymax) / 2 }
+
 (*-------------------- Testing ------------------*)
 let four_by_four = Board.create ~height:4 ~width:4
 let four_by_three = Board.create ~height:3 ~width:4

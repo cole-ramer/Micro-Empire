@@ -15,29 +15,42 @@ module Constants = struct
   let sidebar_width = 200. *. scaling_factor |> Float.iround_down_exn
   let play_area_width = 675. *. scaling_factor |> Float.iround_down_exn
   let block_size = 27. *. scaling_factor |> Float.iround_down_exn
+  let window_block_width = play_area_width / block_size
+  let window_block_height = play_area_height / block_size
+  let virtual_map_width = 30
+  let virtual_map_height = 30
 end
 
-let draw_block { Position.x; y } ~color =
+let draw_block { Position.x; y } ~color ~header (player : Colony.t) =
   let open Constants in
-  let draw_area x_start y_start input_block_size ~input_color =
-    Graphics.set_color input_color;
-    let x1, y1, x2, y2 =
-      (x_start + 1, y_start + 1, input_block_size - 1, input_block_size - 1)
+  let x, y =
+    if header then (x, y)
+    else
+      let { Position.x = center_x; y = center_y } = Colony.center player in
+      let x = x - center_x + (window_block_width / 2) in
+      let y = y - center_y + (window_block_height / 2) in
+      (x, y)
+  in
+  if (x < window_block_width && y < window_block_height) || header then (
+    let draw_area x_start y_start input_block_size ~input_color =
+      Graphics.set_color input_color;
+      let x1, y1, x2, y2 =
+        (x_start + 1, y_start + 1, input_block_size - 1, input_block_size - 1)
+      in
+      Graphics.fill_rect x1 y1 x2 y2
     in
-    Graphics.fill_rect x1 y1 x2 y2
-  in
-  draw_area (x * block_size) (y * block_size) block_size ~input_color:color;
-  let decor_boxes =
-    [
-      (1, 1, 10000); (3, 5, 20000); (6, 6, 13000); (5, 3, -6000); (7, 1, 15000);
-    ]
-  in
-  let decor_size = block_size / 9 in
-  List.iter decor_boxes ~f:(fun (x_off, y_off, color_off) ->
-      draw_area
-        ((x * block_size) + (x_off * decor_size))
-        ((y * block_size) + (y_off * decor_size))
-        decor_size ~input_color:(color + color_off))
+    draw_area (x * block_size) (y * block_size) block_size ~input_color:color;
+    let decor_boxes =
+      [
+        (1, 1, 10000); (3, 5, 20000); (6, 6, 13000); (5, 3, -6000); (7, 1, 15000);
+      ]
+    in
+    let decor_size = block_size / 9 in
+    List.iter decor_boxes ~f:(fun (x_off, y_off, color_off) ->
+        draw_area
+          ((x * block_size) + (x_off * decor_size))
+          ((y * block_size) + (y_off * decor_size))
+          decor_size ~input_color:(color + color_off)))
 
 let init_exn () =
   let open Constants in
@@ -45,8 +58,8 @@ let init_exn () =
   if !only_one then failwith "Can only call init_exn once" else only_one := true;
   Graphics.open_graph
     (Printf.sprintf " %dx%d" (play_area_width + sidebar_width) play_area_height);
-  let height = play_area_height / block_size in
-  let width = play_area_width / block_size in
+  let height = virtual_map_height in
+  let width = virtual_map_width in
   Graphics.set_window_title "Micro Empire";
   Graphics.set_text_size (15. *. scaling_factor |> Float.iround_down_exn);
   Graphics.auto_synchronize false;
@@ -58,20 +71,25 @@ let render (game : Game.t) =
   Graphics.set_color 0;
   Graphics.fill_rect 0 0 play_area_width play_area_height;
   Set.iter game.player.locations ~f:(fun { x; y } ->
-      draw_block { x; y } ~color:1352489);
+      draw_block { x; y } ~color:1352489 ~header:false game.player);
   Map.iter game.enemies ~f:(fun enemy ->
       Set.iter enemy.locations ~f:(fun { x; y } ->
-          draw_block { x; y } ~color:10687515));
+          draw_block { x; y } ~color:10687515 ~header:false game.player));
   List.iter game.nutrients ~f:(fun nutrient ->
-      Set.iter nutrient ~f:(fun { x; y } -> draw_block { x; y } ~color:15248896));
+      Set.iter nutrient ~f:(fun { x; y } ->
+          draw_block { x; y } ~color:15248896 ~header:false game.player));
   draw_block
     {
       x = (play_area_width / block_size) + 3;
       y = (play_area_height / block_size) - 2;
     }
-    ~color:1352489;
-  draw_block { x = (play_area_width / block_size) + 5; y = 4 } ~color:15248896;
-  draw_block { x = (play_area_width / block_size) + 5; y = 2 } ~color:10687515;
+    ~header:true ~color:1352489 game.player;
+  draw_block
+    { x = (play_area_width / block_size) + 5; y = 4 }
+    ~color:15248896 ~header:true game.player;
+  draw_block
+    { x = (play_area_width / block_size) + 5; y = 2 }
+    ~color:10687515 ~header:true game.player;
   let player = game.player in
   let text =
     [
