@@ -127,6 +127,7 @@ let render (game : Game.t) =
       if !insufficient_energy_error > 0 then
         Graphics.draw_string "NOT ENOUGH ENERGY"
   | Game_over reason ->
+      Graphics.set_color 16777215;
       Graphics.moveto (play_area_width / 2) (play_area_height - 50);
       Graphics.draw_string reason);
   Graphics.synchronize ()
