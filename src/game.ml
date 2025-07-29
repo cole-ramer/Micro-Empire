@@ -4,7 +4,8 @@ type t = {
   player : Colony.t;
   game_state : Game_state.t;
   enemies : Colony.t Int.Map.t;
-  nutrients : Position.Set.t;
+  (* change to a list of sets*)
+  nutrients : Position.Set.t list;
   board : Board.t;
   creation_id_generator : Creation_id.t;
 }
@@ -22,8 +23,10 @@ let get_empty_positions (game : t) =
         ignore key;
         Set.union current_enemy_positions data.locations)
   in
+  let all_nutrients_set = Position.Set.union_list game.nutrients in
   let all_occupied_positions =
-    Set.union game.nutrients all_enemies_set |> Set.union game.player.locations
+    Set.union all_nutrients_set all_enemies_set
+    |> Set.union game.player.locations
   in
   Set.diff all_positions_set all_occupied_positions
 
@@ -37,24 +40,29 @@ module Spawning = struct
       let possible_starting_position = Set.nth empty_positions loc_index in
 
       match possible_starting_position with
-      | None -> game
+      | None -> Position.Set.empty
       | Some starting_position ->
           let spawn_size = random_nutrient_size in
           let inital_set = Set.add Position.Set.empty starting_position in
           let new_nutrients =
             Util.expand_randomly inital_set game.board ~size_increase:spawn_size
           in
-          { game with nutrients = Set.union new_nutrients game.nutrients }
+          new_nutrients
 
     let nutrient_replace (game : t) (nutrient_position_to_replace : Position.t)
         =
-      let game_with_new_nutrients = new_nutrient_positions game in
-      {
-        game with
-        nutrients =
-          Set.remove game_with_new_nutrients.nutrients
-            nutrient_position_to_replace;
-      }
+      let updated_nutrients : Position.Set.t list =
+        List.map game.nutrients ~f:(fun nutrient_cluster ->
+            match
+              ( Set.mem nutrient_cluster nutrient_position_to_replace,
+                Set.length nutrient_cluster = 1 )
+            with
+            | true, true -> new_nutrient_positions game
+            | true, false ->
+                Set.remove nutrient_cluster nutrient_position_to_replace
+            | false, _ -> nutrient_cluster)
+      in
+      { game with nutrients = updated_nutrients }
   end
 
   module Enemy = struct
@@ -105,7 +113,7 @@ end
 
 module Environment = struct
   let check_nutrient_consumptions game =
-    let old_nutrient_locations = game.nutrients in
+    let old_nutrient_locations = Position.Set.union_list game.nutrients in
     (* handles consumption for the player *)
     let new_game =
       Set.fold game.player.locations ~init:game
@@ -283,11 +291,15 @@ let create ~width ~height =
         };
       game_state = Game_state.In_progress;
       enemies = Int.Map.empty;
-      nutrients = Position.Set.of_list [ { x = 5; y = 5 } ];
+      nutrients = [ Position.Set.empty ];
       board = { width = 25; height = 22 };
       creation_id_generator;
     }
   in
+  let nutrients =
+    List.init 3 ~f:(fun _ -> Spawning.Nutrient.new_nutrient_positions game)
+  in
+  let game = { game with nutrients } in
   let list_of_three = List.init 3 ~f:Fn.id in
   let game_with_enemies =
     List.fold list_of_three ~init:game ~f:(fun updated_game _ ->
