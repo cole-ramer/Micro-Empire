@@ -12,7 +12,7 @@ let insufficient_energy_error : int ref = ref 0
 module Constants = struct
   let scaling_factor = 1.
   let play_area_height = 600. *. scaling_factor |> Float.iround_down_exn
-  let sidebar_width = 200. *. scaling_factor |> Float.iround_down_exn
+  let sidebar_width = 250. *. scaling_factor |> Float.iround_down_exn
   let play_area_width = 675. *. scaling_factor |> Float.iround_down_exn
   let block_size = 27. *. scaling_factor |> Float.iround_down_exn
   let window_block_width = play_area_width / block_size
@@ -31,7 +31,7 @@ let draw_block { Position.x; y } ~color ~header (player : Colony.t) =
       let y = y - center_y + (window_block_height / 2) in
       (x, y)
   in
-  if (x < window_block_width && y < window_block_height) || header then (
+  if header || (x < window_block_width && y < window_block_height) then (
     let draw_area x_start y_start input_block_size ~input_color =
       Graphics.set_color input_color;
       let x1, y1, x2, y2 =
