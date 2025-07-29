@@ -69,7 +69,7 @@ module Spawning = struct
     let random_enemy_spawn_size = Random.int 5 + 1
     let random_enemy_energy spawn_size = Random.int (75 * spawn_size)
 
-    let inital_locations set_of_starting_point spawn_size board =
+    let initial_locations set_of_starting_point spawn_size board =
       Util.expand_randomly set_of_starting_point board ~size_increase:spawn_size
 
     let starting_level spawn_size = Random.int ((spawn_size / 10) + 1)
@@ -88,7 +88,7 @@ module Spawning = struct
             {
               energy = random_enemy_energy spawn_size;
               size = spawn_size;
-              locations = inital_locations inital_set spawn_size game.board;
+              locations = initial_locations inital_set spawn_size game.board;
               nutrient_absorption_level = starting_level spawn_size;
               decay_reduction_level = starting_level spawn_size;
               movement_level = starting_level spawn_size;
@@ -258,11 +258,11 @@ let handle_key game char =
     | None -> None
   in
   match char with
-  | '1' -> upgrade_player Upgrades.Strength
-  | '2' -> (
+  | '1' -> (
       match Colony.upgrade ~board:game.board game.player Upgrades.Size with
       | Some upgraded_size -> Some { game with player = upgraded_size }
       | None -> None)
+  | '2' -> upgrade_player Upgrades.Strength
   | '3' -> upgrade_player Upgrades.Movement
   | '4' -> upgrade_player Upgrades.Nutrient_absorption
   | '5' -> upgrade_player Upgrades.Decay_reduction
@@ -272,7 +272,9 @@ let handle_key game char =
   | 'd' -> move_player Dir.Right
   | _ -> Some game
 
-let update_environment game = Environment.check_nutrient_consumptions game
+let update_environment game = 
+  let nutrients_consumed = Environment.check_nutrient_consumptions game in
+  Environment.handle_fights nutrients_consumed
 
 (*hardcoded before implementation*)
 let create ~width ~height =
