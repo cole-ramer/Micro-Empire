@@ -80,10 +80,10 @@ let render (game : Game.t) =
       "Energy: " ^ Int.to_string player.energy;
       "Size: " ^ Int.to_string player.size ^ " CELLS";
       "Strength: Level " ^ Int.to_string player.strength_level;
+      "Movement Cost Reduction: Level " ^ Int.to_string player.movement_level;
       "Nutrient Absorption: Level "
       ^ Int.to_string player.nutrient_absorption_level;
       "Decay Reduction: Level " ^ Int.to_string player.decay_reduction_level;
-      "Movement: Level " ^ Int.to_string player.movement_level;
       "";
       "UPGRADE MUTATIONS";
       "(Press # to Upgrade)";
@@ -94,15 +94,15 @@ let render (game : Game.t) =
       ^ Int.to_string
           (Upgrades.upgrade_cost ~level:game.player.strength_level
              Upgrades.Strength);
-      "4. Free Movement : "
+      "3. Movement Cost Reduction : "
       ^ Int.to_string
           (Upgrades.upgrade_cost ~level:game.player.movement_level
              Upgrades.Movement);
-      "5. Nutrient Absorption: "
+      "4. Nutrient Absorption: "
       ^ Int.to_string
           (Upgrades.upgrade_cost ~level:game.player.nutrient_absorption_level
              Upgrades.Nutrient_absorption);
-      "6. Decay Reduction : "
+      "5. Decay Reduction : "
       ^ Int.to_string
           (Upgrades.upgrade_cost ~level:game.player.decay_reduction_level
              Upgrades.Decay_reduction);
