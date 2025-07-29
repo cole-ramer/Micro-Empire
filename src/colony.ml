@@ -134,7 +134,7 @@ let fight ~(colony1 : t) ~(colony2 : t) : t option * t option =
       Upgrades.Strength
   in
   let new_energy =
-    print_s [%message (colony1 : t) (colony2 : t)];
+    (* print_s [%message (colony1 : t) (colony2 : t)]; *)
     colony1.energy + colony2.energy
   in
   let combined_locations = Set.union colony1.locations colony2.locations in
