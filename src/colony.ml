@@ -170,6 +170,7 @@ let consume_nutrient colony =
   { colony with energy = colony.energy + energy_increase }
 
 let decay colony =
+  print_endline "starting decay";
   let decay_amount =
     Upgrades.upgrade_effect ~level:colony.decay_reduction_level
       ~size:colony.size Upgrades.Decay_reduction
@@ -178,6 +179,7 @@ let decay colony =
     Util.shrink_randomly colony.locations ~size_decrease:decay_amount
   in
   let new_size = Set.length new_locations in
+  print_endline "ending decay";
   { colony with locations = new_locations; size = new_size }
 
 let create_empty_colony ?peak_size () =
