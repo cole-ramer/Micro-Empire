@@ -1,3 +1,3 @@
 open! Core
 
-type t = In_progress | Game_over of string
+type t = In_progress | Game_over of string * int

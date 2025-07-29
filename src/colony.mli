@@ -39,7 +39,7 @@ Additonally the colony will also have an updated location set for the new cells 
 val upgrade : ?board:Board.t -> t -> Upgrades.t -> t option
 
 (* Creates a colony with an empty location set, 0 energy, size ,nutrient_absorption_level, etc*)
-val create_empty_colony : t -> t
+val create_empty_colony : ?peak_size:int -> unit -> t
 
 (* Returns a colony with increased energy level from consuming the nutrient *)
 val consume_nutrient : t -> t

@@ -169,7 +169,8 @@ let consume_nutrient colony =
   in
   { colony with energy = colony.energy + energy_increase }
 
-let create_empty_colony colony =
+let create_empty_colony ?peak_size () =
+  let peak_size = match peak_size with None -> 0 | Some size -> size in
   {
     energy = 0;
     size = 0;
@@ -178,7 +179,7 @@ let create_empty_colony colony =
     decay_reduction_level = 0;
     movement_level = 0;
     strength_level = 0;
-    peak_size = colony.peak_size;
+    peak_size;
   }
 
 (*-------------------- Testing ------------------*)

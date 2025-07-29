@@ -126,10 +126,13 @@ let render (game : Game.t) =
   | In_progress ->
       if !insufficient_energy_error > 0 then
         Graphics.draw_string "NOT ENOUGH ENERGY"
-  | Game_over reason ->
+  | Game_over (reason, peak_size) ->
       Graphics.set_color 16777215;
       Graphics.moveto (play_area_width / 2) (play_area_height - 50);
-      Graphics.draw_string reason);
+      Graphics.draw_string reason;
+      Graphics.moveto ((play_area_width / 2) + 20) (play_area_height - 75);
+      Graphics.draw_string ("Peak Size: " ^ Int.to_string peak_size));
+
   Graphics.synchronize ()
 
 let read_key () =

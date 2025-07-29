@@ -160,16 +160,80 @@ module Environment = struct
         | false -> Continue false)
       ~finish:(fun bool -> bool)
 
+  let%expect_test "colonies overlap on shared position" =
+    let colony1 = Colony.create_empty_colony () in
+    let colony2 = Colony.create_empty_colony () in
+    let colony1 =
+      {
+        colony1 with
+        locations =
+          Position.Set.of_list
+            [ { Position.x = 0; y = 0 }; { Position.x = 0; y = 1 } ];
+      }
+    in
+    let colony2 =
+      {
+        colony2 with
+        locations =
+          Position.Set.of_list
+            [ { Position.x = 0; y = 0 }; { Position.x = 0; y = 1 } ];
+      }
+    in
+    print_s [%message (two_colonies_overlap ~colony1 ~colony2 : bool)];
+    [%expect {| true |}]
+
+  let%expect_test "colonies do not overlap" =
+    let colony1 = Colony.create_empty_colony () in
+    let colony2 = Colony.create_empty_colony () in
+    let colony1 =
+      {
+        colony1 with
+        locations =
+          Position.Set.of_list
+            [ { Position.x = 0; y = 0 }; { Position.x = 0; y = 1 } ];
+      }
+    in
+    let colony2 =
+      {
+        colony2 with
+        locations =
+          Position.Set.of_list
+            [ { Position.x = 1; y = 0 }; { Position.x = 1; y = 1 } ];
+      }
+    in
+    print_s [%message (two_colonies_overlap ~colony1 ~colony2 : bool)];
+    [%expect {| false |}]
+
+  let%expect_test "empty colony does not overlap" =
+    let colony1 = Colony.create_empty_colony () in
+    let colony2 = Colony.create_empty_colony () in
+    let colony2 =
+      {
+        colony2 with
+        locations = Position.Set.of_list [ { Position.x = 1; y = 1 } ];
+      }
+    in
+    print_s [%message (two_colonies_overlap ~colony1 ~colony2 : bool)];
+    [%expect {| false |}]
+
+  let%expect_test "both colonies empty" =
+    let colony1 = Colony.create_empty_colony () in
+    let colony2 = Colony.create_empty_colony () in
+    print_s [%message (two_colonies_overlap ~colony1 ~colony2 : bool)];
+    [%expect {| false |}]
+
   let handle_fights_for_one_enemy_colony ~enemy_id ~enemy_colony
       (current_enemy_map : Colony.t Int.Map.t) : Colony.t Int.Map.t =
     Map.fold_until current_enemy_map ~init:current_enemy_map
       ~f:(fun ~key ~data inner_fold_enemy_map ->
         match
           ( Map.mem inner_fold_enemy_map key,
-            two_colonies_overlap ~colony1:enemy_colony ~colony2:data )
+            two_colonies_overlap ~colony1:enemy_colony ~colony2:data,
+            enemy_id = key )
         with
-        | _, false | false, _ -> Continue inner_fold_enemy_map
-        | true, true -> (
+        | _, false, _ | false, _, _ | _, _, true ->
+            Continue inner_fold_enemy_map
+        | true, true, false -> (
             let outer_enemy_result, inner_enemy_result =
               print_s
                 [%message "fight" (enemy_colony : Colony.t) (data : Colony.t)];
@@ -196,6 +260,7 @@ module Environment = struct
 
   let handle_fights game =
     let enemy_map = game.enemies in
+
     (* Player vs Enemy fights*)
     let game_after_player_fights =
       Map.fold enemy_map ~init:game ~f:(fun ~key ~data current_game ->
@@ -214,12 +279,13 @@ module Environment = struct
               | None, Some enemy ->
                   {
                     current_game with
-                    player = Colony.create_empty_colony game.player;
+                    player =
+                      Colony.create_empty_colony
+                        ~peak_size:game.player.peak_size ();
                     enemies = Map.set current_game.enemies ~key ~data:enemy;
                     game_state =
                       Game_state.Game_over
-                        ("GAME OVER: You lost the fight Peak Size: "
-                        ^ Int.to_string game.player.peak_size);
+                        ("GAME OVER: You lost the fight", game.player.peak_size);
                   }
               | _, _ ->
                   raise_s
@@ -260,22 +326,19 @@ let evaluate game =
       | true, true ->
           let game_state =
             Game_state.Game_over
-              ("GAME OVER: No energy and cells left \n Peak Size: "
-              ^ Int.to_string game.player.peak_size)
+              ("GAME OVER: No energy and cells left", game.player.peak_size)
           in
           { game with game_state }
       | false, true ->
           let game_state =
             Game_state.Game_over
-              ("GAME OVER: No cells left \n Peak Size: "
-              ^ Int.to_string game.player.peak_size)
+              ("GAME OVER: No cells left", game.player.peak_size)
           in
           { game with game_state }
       | true, false ->
           let game_state =
             Game_state.Game_over
-              ("GAME OVER: No energy left \n Peak Size: "
-              ^ Int.to_string game.player.peak_size)
+              ("GAME OVER: No energy left", game.player.peak_size)
           in
           { game with game_state }
       | false, false -> (
@@ -293,7 +356,8 @@ let evaluate game =
           with
           | true ->
               let game_state =
-                Game_state.Game_over "WINNER you occupy every cell!"
+                Game_state.Game_over
+                  ("WINNER you occupy every cell!", game.player.peak_size)
               in
               { game with game_state }
           | false -> game))
@@ -309,7 +373,12 @@ let handle_key game char =
     match Colony.move game.player game.board direction with
     | Some moved_colony -> Some { game with player = moved_colony }
     | None ->
-        Some { game with game_state = Game_over "GAME OVER: No energy left" }
+        Some
+          {
+            game with
+            game_state =
+              Game_over ("GAME OVER: No energy left", game.player.peak_size);
+          }
   in
   match char with
   | '1' -> (
