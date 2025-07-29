@@ -66,7 +66,7 @@ module Spawning = struct
   end
 
   module Enemy = struct
-    let random_enemy_spawn_size = Random.int 5 + 1
+    let random_enemy_spawn_size player_size = Random.int player_size + 1
     let random_enemy_energy spawn_size = Random.int (75 * spawn_size)
 
     let initial_locations set_of_starting_point spawn_size board =
@@ -82,7 +82,7 @@ module Spawning = struct
       match possible_starting_position with
       | None -> game
       | Some starting_position ->
-          let spawn_size = random_enemy_spawn_size in
+          let spawn_size = random_enemy_spawn_size game.player.size in
           let inital_set = Set.add Position.Set.empty starting_position in
           let new_enemy : Colony.t =
             {

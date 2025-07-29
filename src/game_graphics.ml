@@ -121,9 +121,14 @@ let render (game : Game.t) =
       Graphics.current_y () |> fun y ->
       Graphics.moveto (play_area_width + 20) (y - 27));
   Graphics.set_color 10687515;
-  if !insufficient_energy_error > 0 then (
-    Graphics.moveto (play_area_width / 2) (play_area_height - 50);
-    Graphics.draw_string "NOT ENOUGH ENERGY");
+  Graphics.moveto (play_area_width / 2) (play_area_height - 50);
+  (match game.game_state with
+  | In_progress ->
+      if !insufficient_energy_error > 0 then
+        Graphics.draw_string "NOT ENOUGH ENERGY"
+  | Game_over reason ->
+      Graphics.moveto (play_area_width / 2) (play_area_height - 50);
+      Graphics.draw_string ("GAME OVER - " ^ reason));
   Graphics.synchronize ()
 
 let read_key () =
