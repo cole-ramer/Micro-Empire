@@ -213,7 +213,8 @@ module Environment = struct
                     current_game with
                     player = Colony.create_empty_colony;
                     enemies = Map.set current_game.enemies ~key ~data:enemy;
-                    game_state = Game_state.Game_over;
+                    game_state =
+                      Game_state.Game_over "GAME OVER: You lost the fight";
                   }
               | _, _ ->
                   raise_s
@@ -246,6 +247,42 @@ module Environment = struct
         Spawning.Enemy.create_new_enemy current_game)
 end
 
+let evaluate game =
+  match game.game_state with
+  | Game_state.Game_over _ -> game
+  | Game_state.In_progress -> (
+      match (game.player.energy <= 0, game.player.size <= 0) with
+      | true, true ->
+          let game_state =
+            Game_state.Game_over "GAME OVER: No energy and cells left"
+          in
+          { game with game_state }
+      | false, true ->
+          let game_state = Game_state.Game_over "GAME OVER: No cells left" in
+          { game with game_state }
+      | true, false ->
+          let game_state = Game_state.Game_over "GAME OVER: No energy left" in
+          { game with game_state }
+      | false, false -> (
+          let number_of_nutrients =
+            List.fold game.nutrients ~init:0 ~f:(fun count cluster ->
+                count + Set.length cluster)
+          in
+          let number_of_enemies = Map.length game.enemies in
+          let number_of_open_positions =
+            Set.length (get_empty_positions game)
+          in
+          match
+            number_of_enemies = 0 && number_of_nutrients = 0
+            && number_of_open_positions = 0
+          with
+          | true ->
+              let game_state =
+                Game_state.Game_over "WINNER you occupy every cell!"
+              in
+              { game with game_state }
+          | false -> game))
+
 let handle_key game char =
   let upgrade_player upgrade =
     match Colony.upgrade game.player upgrade with
@@ -272,7 +309,7 @@ let handle_key game char =
   | 'd' -> move_player Dir.Right
   | _ -> Some game
 
-let update_environment game = 
+let update_environment game =
   let nutrients_consumed = Environment.check_nutrient_consumptions game in
   Environment.handle_fights nutrients_consumed
 
