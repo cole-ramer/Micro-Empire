@@ -70,3 +70,53 @@ let rec expand_randomly (current_locations : Position.Set.t) (board : Board.t)
       increase_size current_locations board ~size_increase:1
     in
     expand_randomly current_locations board ~size_increase:(size_increase - 1)
+
+let rec dfs (starting_position : Position.t) ~(all_positions : Position.Set.t)
+    ~(marked_positions : Position.Set.t) =
+  let marked_positions = Set.add marked_positions starting_position in
+  Set.fold (Position.adjacent_positions starting_position)
+    ~init:marked_positions ~f:(fun currently_marked possible_position ->
+      match
+        ( Set.mem all_positions possible_position,
+          Set.mem currently_marked possible_position )
+      with
+      | true, false ->
+          dfs possible_position ~all_positions
+            ~marked_positions:currently_marked
+      | true, true | false, false -> currently_marked
+      | false, true ->
+          raise_s [%message "Marked a position not in the all positions set"])
+
+let decrease_size (colony_locations : Position.Set.t) =
+  let possilbe_positions =
+    Set.filter colony_locations ~f:(fun position_in_colony ->
+        let colony_without_the_position =
+          Set.remove colony_locations position_in_colony
+        in
+        let vistable =
+          dfs position_in_colony ~all_positions:colony_without_the_position
+            ~marked_positions:Position.Set.empty
+        in
+        Set.equal vistable colony_without_the_position)
+  in
+  match Set.is_empty possilbe_positions with
+  | true -> colony_locations
+  | false ->
+      let random_index = Random.int (Set.length possilbe_positions) in
+      let removed_position =
+        match Set.nth possilbe_positions random_index with
+        | None ->
+            raise_s
+              [%message
+                (random_index : int)
+                  "is not in"
+                  (possilbe_positions : Position.Set.t)]
+        | Some position -> position
+      in
+      Set.remove colony_locations removed_position
+
+let rec shrink_randomly (colony_locations : Position.Set.t) ~size_decrease =
+  if size_decrease = 0 then colony_locations
+  else
+    let colony_locations = decrease_size colony_locations in
+    shrink_randomly colony_locations ~size_decrease:(size_decrease - 1)

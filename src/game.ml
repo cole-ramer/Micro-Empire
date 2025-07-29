@@ -398,7 +398,9 @@ let handle_key game char =
 
 let update_environment game =
   let nutrients_consumed = Environment.check_nutrient_consumptions game in
-  Environment.handle_fights nutrients_consumed
+  let game_after_fights = Environment.handle_fights nutrients_consumed in
+  let player_after_decay = Colony.decay game_after_fights.player in
+  evaluate { game_after_fights with player = player_after_decay }
 
 (*hardcoded before implementation*)
 let create ~width ~height =
