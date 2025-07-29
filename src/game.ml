@@ -93,6 +93,7 @@ module Spawning = struct
               decay_reduction_level = starting_level spawn_size;
               movement_level = starting_level spawn_size;
               strength_level = starting_level spawn_size;
+              peak_size = spawn_size;
             }
           in
           let new_enemy_map =
@@ -211,10 +212,12 @@ module Environment = struct
               | None, Some enemy ->
                   {
                     current_game with
-                    player = Colony.create_empty_colony;
+                    player = Colony.create_empty_colony game.player;
                     enemies = Map.set current_game.enemies ~key ~data:enemy;
                     game_state =
-                      Game_state.Game_over "GAME OVER: You lost the fight";
+                      Game_state.Game_over
+                        ("GAME OVER: You lost the fight \n Peak Size: "
+                        ^ Int.to_string game.player.peak_size);
                   }
               | _, _ ->
                   raise_s
@@ -254,14 +257,24 @@ let evaluate game =
       match (game.player.energy <= 0, game.player.size <= 0) with
       | true, true ->
           let game_state =
-            Game_state.Game_over "GAME OVER: No energy and cells left"
+            Game_state.Game_over
+              ("GAME OVER: No energy and cells left \n Peak Size: "
+              ^ Int.to_string game.player.peak_size)
           in
           { game with game_state }
       | false, true ->
-          let game_state = Game_state.Game_over "GAME OVER: No cells left" in
+          let game_state =
+            Game_state.Game_over
+              ("GAME OVER: No cells left \n Peak Size: "
+              ^ Int.to_string game.player.peak_size)
+          in
           { game with game_state }
       | true, false ->
-          let game_state = Game_state.Game_over "GAME OVER: No energy left" in
+          let game_state =
+            Game_state.Game_over
+              ("GAME OVER: No energy left \n Peak Size: "
+              ^ Int.to_string game.player.peak_size)
+          in
           { game with game_state }
       | false, false -> (
           let number_of_nutrients =
@@ -330,6 +343,7 @@ let create ~width ~height =
           decay_reduction_level = 1;
           strength_level = 1;
           movement_level = 1;
+          peak_size = 1;
         };
       game_state = Game_state.In_progress;
       enemies = Int.Map.empty;

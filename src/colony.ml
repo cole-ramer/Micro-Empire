@@ -8,6 +8,7 @@ type t = {
   decay_reduction_level : Upgrades.Level.t;
   strength_level : Upgrades.Level.t;
   movement_level : Upgrades.Level.t;
+  peak_size : int;
 }
 [@@deriving sexp]
 
@@ -115,6 +116,7 @@ let upgrade ?(board : Board.t option) colony upgrade =
                   locations = new_locations;
                   energy = new_energy;
                   size = colony.size + size_increase;
+                  peak_size = max (colony.size + size_increase) colony.peak_size;
                 }
           | None ->
               raise_s
@@ -146,6 +148,7 @@ let fight ~(colony1 : t) ~(colony2 : t) : t option * t option =
             energy = new_energy;
             size = new_size;
             locations = combined_locations;
+            peak_size = max new_size colony1.peak_size;
           },
         None )
   | false ->
@@ -156,6 +159,7 @@ let fight ~(colony1 : t) ~(colony2 : t) : t option * t option =
             energy = new_energy;
             size = new_size;
             locations = combined_locations;
+            peak_size = max new_size colony2.peak_size;
           } )
 
 let consume_nutrient colony =
@@ -165,7 +169,7 @@ let consume_nutrient colony =
   in
   { colony with energy = colony.energy + energy_increase }
 
-let create_empty_colony =
+let create_empty_colony colony =
   {
     energy = 0;
     size = 0;
@@ -174,6 +178,7 @@ let create_empty_colony =
     decay_reduction_level = 0;
     movement_level = 0;
     strength_level = 0;
+    peak_size = colony.peak_size;
   }
 
 (*-------------------- Testing ------------------*)
@@ -192,6 +197,7 @@ let print_moved_colonies ~(original_positions : Position.Set.t)
       decay_reduction_level = 0;
       strength_level = 0;
       movement_level = 0;
+      peak_size = 0;
     }
   in
   let colony_right = move orignal_colony board Dir.Right in
