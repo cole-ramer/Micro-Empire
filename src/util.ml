@@ -88,32 +88,45 @@ let rec dfs (starting_position : Position.t) ~(all_positions : Position.Set.t)
           raise_s [%message "Marked a position not in the all positions set"])
 
 let decrease_size (colony_locations : Position.Set.t) =
-  let possilbe_positions =
-    Set.filter colony_locations ~f:(fun position_in_colony ->
-        let colony_without_the_position =
-          Set.remove colony_locations position_in_colony
-        in
-        let vistable =
-          dfs position_in_colony ~all_positions:colony_without_the_position
-            ~marked_positions:Position.Set.empty
-        in
-        Set.equal vistable colony_without_the_position)
-  in
-  match Set.is_empty possilbe_positions with
-  | true -> colony_locations
-  | false ->
-      let random_index = Random.int (Set.length possilbe_positions) in
-      let removed_position =
-        match Set.nth possilbe_positions random_index with
-        | None ->
-            raise_s
-              [%message
-                (random_index : int)
-                  "is not in"
-                  (possilbe_positions : Position.Set.t)]
-        | Some position -> position
+  match Set.length colony_locations = 1 with
+  | true -> Position.Set.empty
+  | false -> (
+      let possilbe_positions =
+        Set.filter colony_locations ~f:(fun position_in_colony ->
+            let colony_without_the_position =
+              Set.remove colony_locations position_in_colony
+            in
+            let starting_position =
+              match Set.choose colony_without_the_position with
+              | None ->
+                  raise_s
+                    [%message
+                      (colony_without_the_position : Position.Set.t)
+                        "has length not equal to one but was in the attempt \
+                         dfs call"]
+              | Some position -> position
+            in
+            let vistable =
+              dfs starting_position ~all_positions:colony_without_the_position
+                ~marked_positions:Position.Set.empty
+            in
+            Set.equal vistable colony_without_the_position)
       in
-      Set.remove colony_locations removed_position
+      match Set.is_empty possilbe_positions with
+      | true -> colony_locations
+      | false ->
+          let random_index = Random.int (Set.length possilbe_positions) in
+          let removed_position =
+            match Set.nth possilbe_positions random_index with
+            | None ->
+                raise_s
+                  [%message
+                    (random_index : int)
+                      "is not in"
+                      (possilbe_positions : Position.Set.t)]
+            | Some position -> position
+          in
+          Set.remove colony_locations removed_position)
 
 let rec shrink_randomly (colony_locations : Position.Set.t) ~size_decrease =
   if size_decrease = 0 then colony_locations
