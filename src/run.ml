@@ -23,9 +23,9 @@ let update_environment (game : Game.t ref) ~game_over =
       Game_graphics.render new_game;
       game := new_game;
       match (new_game.game_state : Game_state.t) with
-      | Game_over -> game_over := true
+      | Game_over _ -> game_over := true
       | In_progress -> ())
-  
+
 let handle_keys (game : Game.t ref) ~game_over =
   every ~stop:game_over 0.001 ~f:(fun () ->
       match Game_graphics.read_key () with
@@ -35,7 +35,7 @@ let handle_keys (game : Game.t ref) ~game_over =
           | Some new_game ->
               Game_graphics.render new_game;
               game := new_game;
-              update_environment game ~game_over;
+              update_environment game ~game_over
           | None -> Game_graphics.set_error 20))
 
 let run () =
