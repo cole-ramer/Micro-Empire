@@ -158,7 +158,7 @@ module Environment = struct
         match Set.mem colony2.locations position_in_colony1 with
         | true -> Stop true
         | false -> Continue false)
-      ~finish:(fun bool -> false)
+      ~finish:(fun bool -> bool)
 
   let handle_fights_for_one_enemy_colony ~enemy_id ~enemy_colony
       (current_enemy_map : Colony.t Int.Map.t) : Colony.t Int.Map.t =
