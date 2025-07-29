@@ -34,8 +34,7 @@ let handle_keys (game : Game.t ref) ~game_over =
           match Game.handle_key !game key with
           | Some new_game ->
               Game_graphics.render new_game;
-              game := new_game;
-              update_environment game ~game_over
+              game := new_game
           | None -> Game_graphics.set_error 20))
 
 let run () =

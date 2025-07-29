@@ -44,9 +44,9 @@ module Effect = struct
 
   let get_decay_amount ~size ~level =
     let base = 1.1 in
-    let exponent = Float.of_int size *. (10. -. Float.of_int level) in
+    let exponent = Float.of_int size *. ((10. -. Float.of_int level) /. 10.) in
     let amount =
-      Float.round_nearest (300. *. Float.( ** ) base exponent) |> Float.to_int
+      Float.round_nearest (100. *. Float.( ** ) base exponent) |> Float.to_int
     in
     (Random.int amount + 1) / 300
 end

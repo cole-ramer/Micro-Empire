@@ -237,8 +237,8 @@ module Environment = struct
             Continue inner_fold_enemy_map
         | true, true, false -> (
             let outer_enemy_result, inner_enemy_result =
-              print_s
-                [%message "fight" (enemy_colony : Colony.t) (data : Colony.t)];
+              (* print_s
+                [%message "fight" (enemy_colony : Colony.t) (data : Colony.t)]; *)
               Colony.fight ~colony1:enemy_colony ~colony2:data
             in
             match (outer_enemy_result, inner_enemy_result) with
@@ -368,12 +368,19 @@ let handle_key game char =
   let upgrade_player upgrade =
     match Colony.upgrade game.player upgrade with
     | Some upgraded_colony ->
-        Some (evaluate { game with player = upgraded_colony })
+        Some
+          ({ game with player = upgraded_colony }
+          |> Environment.check_nutrient_consumptions
+          |> Environment.handle_fights |> evaluate)
     | None -> None
   in
   let move_player direction =
     match Colony.move game.player game.board direction with
-    | Some moved_colony -> Some { game with player = moved_colony }
+    | Some moved_colony ->
+        Some
+          ({ game with player = moved_colony }
+          |> Environment.check_nutrient_consumptions
+          |> Environment.handle_fights |> evaluate)
     | None ->
         Some
           {
@@ -396,7 +403,10 @@ let handle_key game char =
   | 'a' -> move_player Dir.Left
   | 's' -> move_player Dir.Down
   | 'd' -> move_player Dir.Right
-  | _ -> Some (evaluate game)
+  | _ ->
+      Some
+        (game |> Environment.check_nutrient_consumptions
+       |> Environment.handle_fights |> evaluate)
 
 let update_environment game =
   let nutrients_consumed = Environment.check_nutrient_consumptions game in
