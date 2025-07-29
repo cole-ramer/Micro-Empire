@@ -171,6 +171,8 @@ module Environment = struct
         | _, false | false, _ -> Continue inner_fold_enemy_map
         | true, true -> (
             let outer_enemy_result, inner_enemy_result =
+              print_s
+                [%message "fight" (enemy_colony : Colony.t) (data : Colony.t)];
               Colony.fight ~colony1:enemy_colony ~colony2:data
             in
             match (outer_enemy_result, inner_enemy_result) with
@@ -216,7 +218,7 @@ module Environment = struct
                     enemies = Map.set current_game.enemies ~key ~data:enemy;
                     game_state =
                       Game_state.Game_over
-                        ("GAME OVER: You lost the fight \n Peak Size: "
+                        ("GAME OVER: You lost the fight Peak Size: "
                         ^ Int.to_string game.player.peak_size);
                   }
               | _, _ ->
