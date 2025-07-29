@@ -298,13 +298,11 @@ let create ~width ~height =
       creation_id_generator;
     }
   in
-  let nutrients =
+  let new_nutrients =
     List.init 3 ~f:(fun _ -> Spawning.Nutrient.new_nutrient_positions game)
   in
-  let game = { game with nutrients } in
+  let game_with_nutrients = { game with nutrients = new_nutrients } in
   let list_of_three = List.init 3 ~f:Fn.id in
-  let game_with_enemies =
-    List.fold list_of_three ~init:game ~f:(fun updated_game _ ->
-        Spawning.Enemy.create_new_enemy updated_game)
-  in
-  Spawning.Nutrient.new_nutrient_positions game_with_enemies
+
+  List.fold list_of_three ~init:game_with_nutrients ~f:(fun updated_game _ ->
+      Spawning.Enemy.create_new_enemy updated_game)

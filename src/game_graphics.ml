@@ -62,8 +62,8 @@ let render (game : Game.t) =
   Map.iter game.enemies ~f:(fun enemy ->
       Set.iter enemy.locations ~f:(fun { x; y } ->
           draw_block { x; y } ~color:10687515));
-  Set.iter game.nutrients ~f:(fun { x; y } ->
-      draw_block { x; y } ~color:15248896);
+  List.iter game.nutrients ~f:(fun nutrient ->
+      Set.iter nutrient ~f:(fun { x; y } -> draw_block { x; y } ~color:15248896));
   draw_block
     {
       x = (play_area_width / block_size) + 3;
@@ -87,13 +87,13 @@ let render (game : Game.t) =
       "";
       "UPGRADE MUTATIONS";
       "(Press # to Upgrade)";
-      "1. Strength: "
+      "1. Size : "
+      ^ Int.to_string
+          (Upgrades.upgrade_cost ~size:game.player.size Upgrades.Size);
+      "2. Strength: "
       ^ Int.to_string
           (Upgrades.upgrade_cost ~level:game.player.strength_level
              Upgrades.Strength);
-      "2. Size : "
-      ^ Int.to_string
-          (Upgrades.upgrade_cost ~size:game.player.size Upgrades.Size);
       "4. Free Movement : "
       ^ Int.to_string
           (Upgrades.upgrade_cost ~level:game.player.movement_level
