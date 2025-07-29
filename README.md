@@ -35,7 +35,7 @@
 <h3 align="center">Micro Empire</h3>
 
   <p align="center">
-    Play as a bacteria colony. Collecting nutrients as energy, buy upgrades and fight other colonies to grow bigger.
+    Play as a bacteria colony. Collect nutrients as energy, buy upgrades and fight other colonies to grow bigger.
     <br />
     <a href="https://github.com/cole-ramer/Micro-Empire/"><strong>Explore the docs »</strong></a>
     <br />
