@@ -478,9 +478,21 @@ module Enemy_behaviour = struct
           [%message
             "there cannot be a distance to colony that is less than the \
              distance to nutrient to a colony that is None"]
-  (* let move_all_enemies game =
-      let avg_position_map = get_avg_position_enemy_map game in
-      let moved_and_upgraded_enemies_map, enemies_to_replace = Map.fold game.enemies ~init:(game.enemies, []) ~f:(fun ~key ~data (moved_enemies, enemies_to_replace) -> ) *)
+
+  let move_all_enemies game =
+    let avg_position_map = get_avg_position_enemy_map game in
+    let moved_and_upgraded_enemies_map, enemies_to_replace =
+      Map.fold game.enemies ~init:(game.enemies, [])
+        ~f:(fun ~key ~data (moved_enemies, enemies_to_replace) ->
+          let moved_enemies, new_enemies_toreplace =
+            move_enemy game key avg_position_map
+          in
+          (moved_enemies, enemies_to_replace @ new_enemies_toreplace))
+    in
+    List.fold enemies_to_replace
+      ~init:{ game with enemies = moved_and_upgraded_enemies_map }
+      ~f:(fun current_game enemy_id_to_remove ->
+        Spawning.Enemy.enemey_replace current_game ~enemy_id_to_remove)
 end
 
 let handle_key game char =
