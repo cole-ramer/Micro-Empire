@@ -392,7 +392,6 @@ let handle_key game char =
   let upgrade_board (game : t) =
     let current_board = game.board.width in
     if Colony.length game.player > current_board * 5 / 4 then (
-      (* Game_graphics.expand_visual (); *)
       {
         game with
         board = { Board.height = current_board * 1; width = current_board * 1 };

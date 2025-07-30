@@ -75,6 +75,7 @@ let init_exn () =
   Game.create ~height ~width
 
 let render (game : Game.t) =
+  block_size := game.board.width / 30 * 27;
   Graphics.clear_graph ();
   let open Constants in
   Graphics.set_color 0;
