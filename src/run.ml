@@ -17,7 +17,7 @@ let update_environment (game : Game.t ref) ~game_over =
   (* The argument of 0.1 passed to [every] means that every 0.1 seconds, we will call
      [Game.step] and re-render the game. Changing this timespan will allow us to change
      the speed of the game. *)
-  every ~stop:game_over 1. ~f:(fun () ->
+  every ~stop:game_over 0.1 ~f:(fun () ->
       Game_graphics.fade_error_message ();
       let new_game = Game.update_environment !game in
       Game_graphics.render new_game;
