@@ -9,3 +9,4 @@ val position_left : t -> t
 val position_up : t -> t
 val position_down : t -> t
 val adjacent_positions : t -> Set.t
+val get_distance : t -> t -> int

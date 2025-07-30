@@ -206,6 +206,16 @@ let center t =
     in
     { Position.x = (xmin + xmax) / 2; y = (ymin + ymax) / 2 }
 
+let possible_upgrades colony =
+  List.filter
+    [
+      Upgrades.Nutrient_absorption;
+      Upgrades.Nutrient_absorption;
+      Upgrades.Movement;
+      Upgrades.Size;
+      Upgrades.Strength;
+    ] ~f:(fun upgrade -> can_purchase_upgrade colony upgrade)
+
 (*-------------------- Testing ------------------*)
 let four_by_four = Board.create ~height:4 ~width:4
 let four_by_three = Board.create ~height:3 ~width:4
