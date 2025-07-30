@@ -45,3 +45,4 @@ val create_empty_colony : ?peak_size:int -> unit -> t
 val consume_nutrient : t -> t
 val decay : t -> t
 val center : t -> Position.t
+val length : t -> int

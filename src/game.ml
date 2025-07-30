@@ -389,11 +389,21 @@ let handle_key game char =
               Game_over ("GAME OVER: No energy left", game.player.peak_size);
           }
   in
+  let upgrade_board (game : t) =
+    let current_board = game.board.width in
+    if Colony.length game.player > current_board * 5 / 4 then (
+      (* Game_graphics.expand_visual (); *)
+      {
+        game with
+        board = { Board.height = current_board * 1; width = current_board * 1 };
+      })
+    else game
+  in
   match char with
   | '1' -> (
       match Colony.upgrade ~board:game.board game.player Upgrades.Size with
       | Some upgraded_size ->
-          Some (evaluate { game with player = upgraded_size })
+          Some (evaluate { game with player = upgraded_size } |> upgrade_board)
       | None -> None)
   | '2' -> upgrade_player Upgrades.Strength
   | '3' -> upgrade_player Upgrades.Movement
@@ -406,7 +416,7 @@ let handle_key game char =
   | _ ->
       Some
         (game |> Environment.check_nutrient_consumptions
-       |> Environment.handle_fights |> evaluate)
+       |> Environment.handle_fights |> upgrade_board |> evaluate)
 
 let update_environment game =
   let nutrients_consumed = Environment.check_nutrient_consumptions game in

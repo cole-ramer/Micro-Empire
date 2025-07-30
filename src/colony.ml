@@ -206,6 +206,17 @@ let center t =
     in
     { Position.x = (xmin + xmax) / 2; y = (ymin + ymax) / 2 }
 
+let length t =
+  if Set.length t.locations = 0 then 0
+  else
+    let first = Option.value_exn (Set.nth t.locations 0) in
+    let xmin, xmax, ymin, ymax =
+      Set.fold t.locations ~init:(first.x, first.x, first.y, first.y)
+        ~f:(fun (xmin, xmax, ymin, ymax) { Position.x; Position.y } ->
+          (min xmin x, max xmax x, min ymin y, max ymax y))
+    in
+    max (xmax - xmin) (ymax - ymin)
+
 (*-------------------- Testing ------------------*)
 let four_by_four = Board.create ~height:4 ~width:4
 let four_by_three = Board.create ~height:3 ~width:4

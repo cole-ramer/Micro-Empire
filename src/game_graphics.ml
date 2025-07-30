@@ -7,6 +7,7 @@ module Colors = struct
 end
 
 let only_one : bool ref = ref false
+let block_size : int ref = ref 27
 let insufficient_energy_error : int ref = ref 0
 
 module Constants = struct
@@ -14,14 +15,14 @@ module Constants = struct
   let play_area_height = 600. *. scaling_factor |> Float.iround_down_exn
   let sidebar_width = 250. *. scaling_factor |> Float.iround_down_exn
   let play_area_width = 675. *. scaling_factor |> Float.iround_down_exn
-  let block_size = 27. *. scaling_factor |> Float.iround_down_exn
-  let window_block_width = play_area_width / block_size
-  let window_block_height = play_area_height / block_size
+  let window_block_width = play_area_width / !block_size
+  let window_block_height = play_area_height / !block_size
   let virtual_map_width = 30
   let virtual_map_height = 30
 end
 
-let draw_block { Position.x; y } ~color ~header (player : Colony.t) =
+let draw_block { Position.x; y } ?(no_decor : bool option) ~color ~header
+    (player : Colony.t) =
   let open Constants in
   let x, y =
     if header then (x, y)
@@ -31,6 +32,7 @@ let draw_block { Position.x; y } ~color ~header (player : Colony.t) =
       let y = y - center_y + (window_block_height / 2) in
       (x, y)
   in
+  let block_size = if header then 27 else !block_size in
   if header || (x < window_block_width && y < window_block_height) then (
     let draw_area x_start y_start input_block_size ~input_color =
       Graphics.set_color input_color;
@@ -40,17 +42,24 @@ let draw_block { Position.x; y } ~color ~header (player : Colony.t) =
       Graphics.fill_rect x1 y1 x2 y2
     in
     draw_area (x * block_size) (y * block_size) block_size ~input_color:color;
-    let decor_boxes =
-      [
-        (1, 1, 10000); (3, 5, 20000); (6, 6, 13000); (5, 3, -6000); (7, 1, 15000);
-      ]
-    in
-    let decor_size = block_size / 9 in
-    List.iter decor_boxes ~f:(fun (x_off, y_off, color_off) ->
-        draw_area
-          ((x * block_size) + (x_off * decor_size))
-          ((y * block_size) + (y_off * decor_size))
-          decor_size ~input_color:(color + color_off)))
+    match no_decor with
+    | None ->
+        let decor_boxes =
+          [
+            (1, 1, 10000);
+            (3, 5, 20000);
+            (6, 6, 13000);
+            (5, 3, -6000);
+            (7, 1, 15000);
+          ]
+        in
+        let decor_size = block_size / 9 in
+        List.iter decor_boxes ~f:(fun (x_off, y_off, color_off) ->
+            draw_area
+              ((x * block_size) + (x_off * decor_size))
+              ((y * block_size) + (y_off * decor_size))
+              decor_size ~input_color:(color + color_off))
+    | _ -> ())
 
 let init_exn () =
   let open Constants in
@@ -70,6 +79,17 @@ let render (game : Game.t) =
   let open Constants in
   Graphics.set_color 0;
   Graphics.fill_rect 0 0 play_area_width play_area_height;
+
+  (* Background pattern effect *)
+
+  (* let { Position.x = centerx; y = centery } = Colony.center game.player in
+  for x = centerx - play_area_width to centerx + play_area_width do
+    for y = centery - play_area_height to centery + play_area_height do
+      if (x + y) % 15 = 0 && y % 3 = 0 then
+        draw_block { x; y } ~no_decor:true ~color:5526612 ~header:false
+          game.player
+    done
+  done; *)
   Set.iter game.player.locations ~f:(fun { x; y } ->
       draw_block { x; y } ~color:1352489 ~header:false game.player);
   Map.iter game.enemies ~f:(fun enemy ->
@@ -79,16 +99,13 @@ let render (game : Game.t) =
       Set.iter nutrient ~f:(fun { x; y } ->
           draw_block { x; y } ~color:15248896 ~header:false game.player));
   draw_block
-    {
-      x = (play_area_width / block_size) + 3;
-      y = (play_area_height / block_size) - 2;
-    }
+    { x = (play_area_width / 27) + 3; y = (play_area_height / 27) - 2 }
     ~header:true ~color:1352489 game.player;
   draw_block
-    { x = (play_area_width / block_size) + 5; y = 4 }
+    { x = (play_area_width / 27) + 5; y = 4 }
     ~color:15248896 ~header:true game.player;
   draw_block
-    { x = (play_area_width / block_size) + 5; y = 2 }
+    { x = (play_area_width / 27) + 5; y = 2 }
     ~color:10687515 ~header:true game.player;
   let player = game.player in
   let text =
@@ -162,3 +179,5 @@ let fade_error_message () =
   if !insufficient_energy_error > 0 then
     insufficient_energy_error := !insufficient_energy_error - 1
   else ()
+
+let expand_visual () = block_size := !block_size - 9
