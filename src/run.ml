@@ -35,7 +35,7 @@ let handle_keys (game : Game.t ref) ~game_over =
           | Some new_game ->
               Game_graphics.render new_game;
               game := new_game
-          | None -> Game_graphics.set_error 20))
+          | None -> Game_graphics.set_error 15))
 
 let run () =
   let game : Game.t ref = ref (Game_graphics.init_exn ()) in
