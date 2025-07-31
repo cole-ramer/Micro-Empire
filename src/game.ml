@@ -398,12 +398,16 @@ let upgrade_board (game : t) =
 
 module Enemy_behaviour = struct
   let move_all_enemies game =
-    let moved_enemies =
-      Map.map game.enemies ~f:(fun enemy ->
-          let direction = List.random_element_exn Dir.directions_list in
-          Colony.move enemy game.board direction)
-    in
-    { game with enemies = moved_enemies }
+    let random = Random.int 9 in
+    match random = 0 with
+    | true ->
+        let moved_enemies =
+          Map.map game.enemies ~f:(fun enemy ->
+              let direction = List.random_element_exn Dir.directions_list in
+              Colony.move enemy game.board direction)
+        in
+        { game with enemies = moved_enemies }
+    | false -> game
 end
 
 let handle_key game char =
@@ -469,13 +473,13 @@ let update_environment game =
   let start_time = Time_ns.now () in
   let game_after_fights = Environment.handle_fights nutrients_consumed in
   Util.print_time_diff "fights_handled" start_time;
-  let start_time = Time_ns.now () in
-  let game_after_moves = Enemy_behaviour.move_all_enemies game_after_fights in
-  Util.print_time_diff "enemy moves" start_time;
+  (* let start_time = Time_ns.now () in *)
+  (* let game_after_moves = Enemy_behaviour.move_all_enemies game_after_fights in
+  Util.print_time_diff "enemy moves" start_time; *)
   let start_time = Time_ns.now () in
   let player_after_decay = Colony.decay game_after_fights.player in
   Util.print_time_diff "player decay" start_time;
-  let game = evaluate { game_after_moves with player = player_after_decay } in
+  let game = evaluate { game_after_fights with player = player_after_decay } in
 
   game
 

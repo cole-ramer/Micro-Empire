@@ -85,7 +85,7 @@ let rec expand_randomly (current_locations : Position.Set.t) (board : Board.t)
     in
     expand_randomly current_locations board ~size_increase:(size_increase - 1)
 
-let rec dfs (starting_position : Position.t) ~(all_positions : Position.Set.t)
+(* let rec dfs (starting_position : Position.t) ~(all_positions : Position.Set.t)
     ~(marked_positions : Position.Set.t) =
   let marked_positions = Set.add marked_positions starting_position in
   Set.fold (Position.adjacent_positions starting_position)
@@ -99,9 +99,35 @@ let rec dfs (starting_position : Position.t) ~(all_positions : Position.Set.t)
             ~marked_positions:currently_marked
       | true, true | false, false -> currently_marked
       | false, true ->
-          raise_s [%message "Marked a position not in the all positions set"])
+          raise_s [%message "Marked a position not in the all positions set"]) *)
+let dfs (all_positions : Position.Set.t) start_position =
+  let visited = Position.Hash_Set.create () in
+  let to_visit = Stack.create () in
+  Stack.push to_visit start_position;
+  let rec traverse () =
+    match Stack.pop to_visit with
+    | None -> ()
+    | Some current_position ->
+        if not (Hash_set.mem visited current_position) then (
+          Hash_set.add visited current_position;
+          Set.iter (Position.adjacent_positions current_position)
+            ~f:(fun next_position ->
+              match
+                ( Set.mem all_positions next_position,
+                  Hash_set.mem visited next_position )
+              with
+              | true, false -> Stack.push to_visit next_position
+              | false, false | true, true -> ()
+              | false, true ->
+                  raise_s
+                    [%message
+                      "can not have visited a node not in the all positions set"]));
+        traverse ()
+  in
+  traverse ();
+  visited
 
-let decrease_size (colony_locations : Position.Set.t) =
+(* let decrease_size (colony_locations : Position.Set.t) =
   match Set.length colony_locations = 1 with
   | true -> Position.Set.empty
   | false -> (
@@ -120,11 +146,10 @@ let decrease_size (colony_locations : Position.Set.t) =
                          dfs call"]
               | Some position -> position
             in
-            let vistable =
-              dfs starting_position ~all_positions:colony_without_the_position
-                ~marked_positions:Position.Set.empty
-            in
-            Set.equal vistable colony_without_the_position)
+            let vistable = dfs colony_without_the_position starting_position in
+            match Hash_set.length vistable = Set.length colony_without_the_position with
+            |
+            Set.fold colony_without_the_position)
       in
       match Set.is_empty possilbe_positions with
       | true -> colony_locations
@@ -140,7 +165,7 @@ let decrease_size (colony_locations : Position.Set.t) =
                       (possilbe_positions : Position.Set.t)]
             | Some position -> position
           in
-          Set.remove colony_locations removed_position)
+          Set.remove colony_locations removed_position) *)
 
 let knuth_shuffle a =
   let n = Array.length a in
@@ -173,11 +198,10 @@ let rec shrink_randomly (colony_locations : Position.Set.t) ~size_decrease =
             in
             match Set.choose set_with_pos_removed with
             | Some starting_position -> (
-                let vistable =
-                  dfs starting_position ~all_positions:set_with_pos_removed
-                    ~marked_positions:Position.Set.empty
-                in
-                match Set.equal set_with_pos_removed vistable with
+                let vistable = dfs set_with_pos_removed starting_position in
+                match
+                  Set.length set_with_pos_removed = Hash_set.length vistable
+                with
                 | true -> Continue (set_with_pos_removed, left_to_remove - 1)
                 | false -> Continue (current_positions_left, left_to_remove))
             | None -> (
