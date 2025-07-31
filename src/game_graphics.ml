@@ -12,27 +12,48 @@ let insufficient_energy_error : int ref = ref 0
 
 module Constants = struct
   let scaling_factor = 1.
-  let play_area_height = 600. *. scaling_factor |> Float.iround_down_exn
+  let play_area_height = 648. *. scaling_factor |> Float.iround_down_exn
   let sidebar_width = 250. *. scaling_factor |> Float.iround_down_exn
-  let play_area_width = 675. *. scaling_factor |> Float.iround_down_exn
-  let window_block_width = play_area_width / !block_size
-  let window_block_height = play_area_height / !block_size
+  let play_area_width = 648. *. scaling_factor |> Float.iround_down_exn
   let virtual_map_width = 30
   let virtual_map_height = 30
 end
 
-let draw_block { Position.x; y } ?(no_decor : bool option) ~color ~header
-    (player : Colony.t) =
+let draw_block { Position.x; y } ~board_size ?(no_decor : bool option) ~color
+    ~header (player : Colony.t) =
+  let block_size =
+    if header then 27 else if !block_size = 0 then 2 else !block_size
+  in
   let open Constants in
+  let window_block_width = play_area_width / block_size in
+  let window_block_height = play_area_height / block_size in
   let x, y =
     if header then (x, y)
     else
       let { Position.x = center_x; y = center_y } = Colony.center player in
+      let center_x =
+        if center_x < window_block_width / 2 then window_block_width / 2
+        else center_x
+      in
+      let center_y =
+        if center_y < window_block_height / 2 then window_block_height / 2
+        else center_y
+      in
+
+      let center_x =
+        if center_x > board_size - (window_block_width / 2) then
+          board_size - (window_block_width / 2)
+        else center_x
+      in
+      let center_y =
+        if center_y > board_size - (window_block_height / 2) then
+          board_size - (window_block_height / 2)
+        else center_y
+      in
       let x = x - center_x + (window_block_width / 2) in
       let y = y - center_y + (window_block_height / 2) in
       (x, y)
   in
-  let block_size = if header then 27 else !block_size in
   if header || (x < window_block_width && y < window_block_height) then (
     let draw_area x_start y_start input_block_size ~input_color =
       Graphics.set_color input_color;
@@ -53,7 +74,7 @@ let draw_block { Position.x; y } ?(no_decor : bool option) ~color ~header
             (7, 1, 15000);
           ]
         in
-        let decor_size = block_size / 9 in
+        let decor_size = (block_size + 8) / 9 in
         List.iter decor_boxes ~f:(fun (x_off, y_off, color_off) ->
             draw_area
               ((x * block_size) + (x_off * decor_size))
@@ -75,39 +96,32 @@ let init_exn () =
   Game.create ~height ~width
 
 let render (game : Game.t) =
-  block_size := game.board.width / 30 * 27;
+  block_size := 648 * 3 / 2 / game.board.width;
   Graphics.clear_graph ();
   let open Constants in
   Graphics.set_color 0;
   Graphics.fill_rect 0 0 play_area_width play_area_height;
 
-  (* Background pattern effect *)
-
-  (* let { Position.x = centerx; y = centery } = Colony.center game.player in
-  for x = centerx - play_area_width to centerx + play_area_width do
-    for y = centery - play_area_height to centery + play_area_height do
-      if (x + y) % 15 = 0 && y % 3 = 0 then
-        draw_block { x; y } ~no_decor:true ~color:5526612 ~header:false
-          game.player
-    done
-  done; *)
   Set.iter game.player.locations ~f:(fun { x; y } ->
-      draw_block { x; y } ~color:1352489 ~header:false game.player);
+      draw_block { x; y } ~color:1352489 ~board_size:game.board.width
+        ~header:false game.player);
   Map.iter game.enemies ~f:(fun enemy ->
       Set.iter enemy.locations ~f:(fun { x; y } ->
-          draw_block { x; y } ~color:10687515 ~header:false game.player));
+          draw_block { x; y } ~color:10687515 ~board_size:game.board.width
+            ~header:false game.player));
   List.iter game.nutrients ~f:(fun nutrient ->
       Set.iter nutrient ~f:(fun { x; y } ->
-          draw_block { x; y } ~color:15248896 ~header:false game.player));
+          draw_block { x; y } ~color:15248896 ~board_size:game.board.width
+            ~header:false game.player));
   draw_block
     { x = (play_area_width / 27) + 3; y = (play_area_height / 27) - 2 }
-    ~header:true ~color:1352489 game.player;
+    ~board_size:game.board.width ~header:true ~color:1352489 game.player;
   draw_block
     { x = (play_area_width / 27) + 5; y = 4 }
-    ~color:15248896 ~header:true game.player;
+    ~board_size:game.board.width ~color:15248896 ~header:true game.player;
   draw_block
     { x = (play_area_width / 27) + 5; y = 2 }
-    ~color:10687515 ~header:true game.player;
+    ~board_size:game.board.width ~color:10687515 ~header:true game.player;
   let player = game.player in
   let text =
     [

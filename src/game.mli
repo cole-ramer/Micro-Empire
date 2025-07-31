@@ -12,3 +12,4 @@ type t = {
 val handle_key : t -> char -> t option
 val update_environment : t -> t
 val create : width:int -> height:int -> t
+val upgrade_board : t -> t

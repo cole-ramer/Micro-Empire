@@ -67,7 +67,7 @@ module Spawning = struct
 
   module Enemy = struct
     let random_enemy_spawn_size player_size =
-      match player_size with 0 -> 1 | _ -> Random.int (player_size * 2) + 1
+      match player_size with 0 -> 1 | _ -> Random.int player_size + 1
 
     let random_enemy_energy spawn_size = Random.int (75 * spawn_size)
 
@@ -364,6 +364,20 @@ let evaluate game =
               { game with game_state }
           | false -> game))
 
+let upgrade_board (game : t) =
+  let current_board = game.board.width in
+  if Colony.length game.player > current_board / 2 then
+    {
+      game with
+      board =
+        {
+          Board.height =
+            Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
+          width = Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
+        };
+    }
+  else game
+
 let handle_key game char =
   let upgrade_player upgrade =
     match Colony.upgrade game.player upgrade with
@@ -389,15 +403,7 @@ let handle_key game char =
               Game_over ("GAME OVER: No energy left", game.player.peak_size);
           }
   in
-  let upgrade_board (game : t) =
-    let current_board = game.board.width in
-    if Colony.length game.player > current_board * 5 / 4 then (
-      {
-        game with
-        board = { Board.height = current_board * 1; width = current_board * 1 };
-      })
-    else game
-  in
+
   match char with
   | '1' -> (
       match Colony.upgrade ~board:game.board game.player Upgrades.Size with
