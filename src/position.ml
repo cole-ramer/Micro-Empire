@@ -1,11 +1,13 @@
 open! Core
 
 module T = struct
-  type t = { x : int; y : int } [@@deriving sexp, compare, equal]
+  type t = { x : int; y : int } [@@deriving sexp, compare, equal, hash]
 end
 
 include T
 include Comparable.Make (T)
+module Hash_Set = Hash_set.Make (T)
+module Table = Hashtbl.Make (T)
 
 let position_right t = { x = t.x + 1; y = t.y }
 let position_left t = { x = t.x - 1; y = t.y }

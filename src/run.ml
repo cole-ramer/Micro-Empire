@@ -27,7 +27,7 @@ let update_environment (game : Game.t ref) ~game_over =
       | In_progress -> ())
 
 let handle_keys (game : Game.t ref) ~game_over =
-  every ~stop:game_over 0.001 ~f:(fun ()->
+  every ~stop:game_over 0.001 ~f:(fun () ->
       match Game_graphics.read_key () with
       | None -> ()
       | Some key -> (

@@ -393,6 +393,34 @@ let evaluate game =
               { game with game_state }
           | false -> game))
 
+let upgrade_board (game : t) =
+  let current_board = game.board.width in
+  if Colony.length game.player > current_board / 2 then
+    {
+      game with
+      board =
+        {
+          Board.height =
+            Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
+          width = Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
+        };
+    }
+  else game
+
+module Enemy_behaviour = struct
+  let move_all_enemies game =
+    let random = Random.int 9 in
+    match random = 0 with
+    | true ->
+        let moved_enemies =
+          Map.map game.enemies ~f:(fun enemy ->
+              let direction = List.random_element_exn Dir.directions_list in
+              Colony.move enemy game.board direction)
+        in
+        { game with enemies = moved_enemies }
+    | false -> game
+end
+
 let handle_key game char =
   let upgrade_player upgrade =
     match Colony.upgrade game.player upgrade with
@@ -450,10 +478,21 @@ let handle_key game char =
        |> Environment.handle_fights |> upgrade_board |> evaluate)
 
 let update_environment game =
+  let start_time = Time_ns.now () in
   let nutrients_consumed = Environment.check_nutrient_consumptions game in
+  Util.print_time_diff "nutrients_consumed" start_time;
+  let start_time = Time_ns.now () in
   let game_after_fights = Environment.handle_fights nutrients_consumed in
+  Util.print_time_diff "fights_handled" start_time;
+  (* let start_time = Time_ns.now () in *)
+  (* let game_after_moves = Enemy_behaviour.move_all_enemies game_after_fights in
+  Util.print_time_diff "enemy moves" start_time; *)
+  let start_time = Time_ns.now () in
   let player_after_decay = Colony.decay game_after_fights.player in
-  evaluate { game_after_fights with player = player_after_decay }
+  Util.print_time_diff "player decay" start_time;
+  let game = evaluate { game_after_fights with player = player_after_decay } in
+
+  game
 
 (*hardcoded before implementation*)
 let create ~width ~height =
