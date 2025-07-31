@@ -94,7 +94,8 @@ let upgrade ?(board : Board.t option) colony upgrade =
                 Upgrades.upgrade_effect ~size:colony.size upgrade
               in
               let new_locations =
-                Util.increase_size colony.locations b ~size_increase
+                Util.increase_size colony.locations Position.Set.empty b
+                  ~size_increase
               in
               Some
                 {

@@ -37,39 +37,46 @@ let%expect_test "choose function" =
     ("choose 2 6" (5 4))
     ("choose 2 6" (1 0)) |}]
 
-let increase_size (colony_locations : Position.Set.t) (board : Board.t)
-    ~size_increase =
-  let availble_positions =
-    Set.to_list colony_locations
-    |> List.map ~f:(fun colony_position ->
-           Position.adjacent_positions colony_position)
-    |> Position.Set.union_list
+let increase_size (colony_locations : Position.Set.t)
+    (currently_filled : Position.Set.t) (board : Board.t) ~size_increase =
+  let available_positions =
+    Set.diff
+      (Set.to_list colony_locations
+      |> List.map ~f:(fun colony_position ->
+             Position.adjacent_positions colony_position)
+      |> Position.Set.union_list)
+      currently_filled
   in
-  let availble_positions =
-    Set.filter availble_positions ~f:(fun possible_position ->
-        (not (Set.mem colony_locations possible_position))
-        && Board.is_in_bounds board possible_position)
+  let overlap pos = Set.mem colony_locations pos in
+  let available_positions =
+    Set.filter available_positions ~f:(fun possible_position ->
+        (not (overlap possible_position))
+        && Board.is_in_bounds board possible_position
+        (* 
+        && Set.fold (Position.adjacent_positions possible_position) ~init:true
+             ~f:(fun status adj -> if status then overlap adj else false) *))
     |> Set.to_list
   in
   let new_colony_positions_indexes =
     choose ~amount_to_choose:size_increase
-      ~amount_to_choose_from:(List.length availble_positions)
+      ~amount_to_choose_from:(List.length available_positions)
   in
   let picked_positions =
-    List.filteri availble_positions ~f:(fun index _ ->
+    List.filteri available_positions ~f:(fun index _ ->
         Set.mem new_colony_positions_indexes index)
     |> Position.Set.of_list
   in
   Set.union picked_positions colony_locations
 
-let rec expand_randomly (current_locations : Position.Set.t) (board : Board.t)
-    ~size_increase =
+let rec expand_randomly (current_locations : Position.Set.t)
+    (filled_positions : Position.Set.t) (board : Board.t) ~size_increase =
   if size_increase = 0 then current_locations
   else
     let current_locations =
-      increase_size current_locations board ~size_increase:1
+      increase_size current_locations filled_positions board ~size_increase:1
     in
-    expand_randomly current_locations board ~size_increase:(size_increase - 1)
+    expand_randomly current_locations filled_positions board
+      ~size_increase:(size_increase - 1)
 
 let rec dfs (starting_position : Position.t) ~(all_positions : Position.Set.t)
     ~(marked_positions : Position.Set.t) =

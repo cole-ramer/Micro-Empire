@@ -59,7 +59,9 @@ module Spawning = struct
           let spawn_size = random_nutrient_size in
           let inital_set = Set.add Position.Set.empty starting_position in
           let new_nutrients =
-            Util.expand_randomly inital_set game.board ~size_increase:spawn_size
+            Util.expand_randomly inital_set
+              (Position.Set.union_list game.nutrients)
+              game.board ~size_increase:spawn_size
           in
           new_nutrients
 
@@ -85,14 +87,19 @@ module Spawning = struct
 
     let random_enemy_energy spawn_size = Random.int (75 * spawn_size)
 
-    let initial_locations set_of_starting_point spawn_size board =
-      Util.expand_randomly set_of_starting_point board ~size_increase:spawn_size
+    let initial_locations starting_position (filled_positions : Position.Set.t)
+        spawn_size board =
+      Util.expand_randomly
+        (Set.add Position.Set.empty starting_position)
+        filled_positions board ~size_increase:spawn_size
 
     let starting_level spawn_size = Random.int ((spawn_size / 10) + 1)
 
     let create_new_enemy game =
       let num_pos = Set.length (get_empty_positions game) in
-      let game = if num_pos < game.player.size then upgrade_board game else game in
+      let game =
+        if num_pos < game.player.size then upgrade_board game else game
+      in
       let loc_index = Random.int (Set.length (get_empty_positions game)) in
       let possible_starting_position =
         Set.nth (get_empty_positions game) loc_index
@@ -101,12 +108,18 @@ module Spawning = struct
       | None -> game
       | Some starting_position ->
           let spawn_size = random_enemy_spawn_size game.player.size in
-          let inital_set = Set.add Position.Set.empty starting_position in
+          let all_colonies =
+            Map.fold game.enemies ~init:game.player.locations
+              ~f:(fun ~key:_ ~data:enemy pos_set ->
+                Set.union enemy.locations pos_set)
+          in
           let new_enemy : Colony.t =
             {
               energy = random_enemy_energy spawn_size;
               size = spawn_size;
-              locations = initial_locations inital_set spawn_size game.board;
+              locations =
+                initial_locations starting_position all_colonies spawn_size
+                  game.board;
               nutrient_absorption_level = starting_level spawn_size;
               decay_reduction_level = starting_level spawn_size;
               movement_level = starting_level spawn_size;
@@ -121,7 +134,7 @@ module Spawning = struct
           in
           { game with enemies = new_enemy_map }
 
-    let enemey_replace game ~(enemy_id_to_remove : int) =
+    let enemy_replace game ~(enemy_id_to_remove : int) =
       let game_with_new_enemy = create_new_enemy game in
       {
         game with
