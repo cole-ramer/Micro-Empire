@@ -43,6 +43,15 @@ val create_empty_colony : ?peak_size:int -> unit -> t
 
 (* Returns a colony with increased energy level from consuming the nutrient *)
 val consume_nutrient : t -> t
+
+(* Decays the colony, randomly removing a number of cells (will often be 0)
+influnced by the size and decay reduction level of the colony*)
 val decay : t -> t
+
+(* Gets position that is in the center of the colonies extremas.
+i.e. center = (x_max + x_min) / 2, (y_max + y_min) / 2*)
 val center : t -> Position.t
 val length : t -> int
+
+(* returns a list of upgrades the colony can afford *)
+val possible_upgrades : t -> Upgrades.t list

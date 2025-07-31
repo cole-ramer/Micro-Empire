@@ -12,6 +12,9 @@ let position_left t = { x = t.x - 1; y = t.y }
 let position_up t = { x = t.x; y = t.y + 1 }
 let position_down t = { x = t.x; y = t.y - 1 }
 
+let get_distance pos1 pos2 =
+  Int.abs (pos1.x - pos2.x) + Int.abs (pos1.y - pos2.y)
+
 let adjacent_positions position =
   Set.of_list
     [
