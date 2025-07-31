@@ -15,3 +15,5 @@ removed do not cause the set to be come disjoint. If there are not size_decrease
 number of positiosn that if those parameters it will simply remove as many as it 
 can *)
 val shrink_randomly : Position.Set.t -> size_decrease:int -> Position.Set.t
+val print_function_time : string -> unit
+val print_time_diff : string -> Time_ns.t -> unit

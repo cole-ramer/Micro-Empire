@@ -1,5 +1,19 @@
 open! Core
 
+let print_function_time (message : string) =
+  let time =
+    Time_ns.to_string_abs (Time_ns.now ())
+      ~zone:(Core_private.Time_zone.of_utc_offset ~hours:(-4))
+  in
+  print_s [%message message time]
+
+let print_time_diff (message : string) (start_time : Time_ns.t) =
+  let end_time = Time_ns.now () in
+  let time_diff =
+    Time_ns.diff end_time start_time |> Time_ns.Span.to_short_string
+  in
+  print_s [%message message time_diff]
+
 let choose ~(amount_to_choose : int) ~(amount_to_choose_from : int) =
   let choices = List.init amount_to_choose_from ~f:Fn.id in
   List.fold choices ~init:([], amount_to_choose) ~f:(fun (chosen_so_far, m) i ->
@@ -128,8 +142,53 @@ let decrease_size (colony_locations : Position.Set.t) =
           in
           Set.remove colony_locations removed_position)
 
+let knuth_shuffle a =
+  let n = Array.length a in
+  let a = Array.copy a in
+  for i = n - 1 downto 1 do
+    let k = Random.int (i + 1) in
+    let x = a.(k) in
+    a.(k) <- a.(i);
+    a.(i) <- x
+  done;
+  a
+
 let rec shrink_randomly (colony_locations : Position.Set.t) ~size_decrease =
-  if size_decrease = 0 then colony_locations
+  (* if size_decrease = 0 then colony_locations
   else
     let colony_locations = decrease_size colony_locations in
-    shrink_randomly colony_locations ~size_decrease:(size_decrease - 1)
+    shrink_randomly colony_locations ~size_decrease:(size_decrease - 1) *)
+  let start_time = Time_ns.now () in
+
+  let shuffled_position_array = knuth_shuffle (Set.to_array colony_locations) in
+  let final_locations =
+    Array.fold_until shuffled_position_array
+      ~init:(colony_locations, size_decrease)
+      ~f:(fun (current_positions_left, left_to_remove) possible_position ->
+        match left_to_remove > 0 with
+        | false -> Stop current_positions_left
+        | true -> (
+            let set_with_pos_removed =
+              Set.remove current_positions_left possible_position
+            in
+            match Set.choose set_with_pos_removed with
+            | Some starting_position -> (
+                let vistable =
+                  dfs starting_position ~all_positions:set_with_pos_removed
+                    ~marked_positions:Position.Set.empty
+                in
+                match Set.equal set_with_pos_removed vistable with
+                | true -> Continue (set_with_pos_removed, left_to_remove - 1)
+                | false -> Continue (current_positions_left, left_to_remove))
+            | None -> (
+                match Set.length current_positions_left = 1 with
+                | true -> Stop Position.Set.empty
+                | false ->
+                    raise_s
+                      [%message
+                        "was unable to choose from a set that was not of \
+                         length 1"])))
+      ~finish:(fun (positions_left, _) -> positions_left)
+  in
+  print_time_diff "decay fold" start_time;
+  final_locations
