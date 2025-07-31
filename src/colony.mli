@@ -14,11 +14,10 @@ type t = {
 
 (* Takes in a colony, a game board, and a direction to move. 
 Attempts to move all positions in the colony by one in the direction given.
-Returns Some (colony with locations field set to the moved positions,
- and energy field updated with the cost of the movement). 
-If the colony goes out of bounds it will return the colony unchanged.
-If the colony can not afford the move it will return None *)
-val move : t -> Board.t -> Dir.t -> t option
+Returns a colony with the updated positions. If the colony goes out of bounds 
+it will return the colony unchanged.
+NOTE: the move function does not handle the cost of moving the colony *)
+val move : t -> Board.t -> Dir.t -> t
 
 (* Takes in two colonies and handles the fight logic between them based on their size, strength level, and a bit of randomness.
  The winner colony will have an energey and size of the two colonies combined. Additonally the winning colony will grow cells 
