@@ -14,7 +14,7 @@ type t = {
 
 (** Choose m numbers from 0 - n-1*)
 
-let move t (board : Board.t) (direction : Dir.t) : t option =
+let move t (board : Board.t) (direction : Dir.t) : t =
   let move_function =
     match direction with
     | Right -> Position.position_right
@@ -35,22 +35,8 @@ let move t (board : Board.t) (direction : Dir.t) : t option =
       ~finish:(fun new_locations_set -> Some new_locations_set)
   in
   match new_locations_option with
-  | Some new_locations -> (
-      let movement_cost =
-        Upgrades.upgrade_effect ~size:t.size ~level:t.movement_level
-          Upgrades.Movement
-      in
-      let new_energy_total = t.energy - movement_cost in
-      match new_energy_total >= 0 with
-      | true ->
-          Some
-            {
-              t with
-              locations = new_locations;
-              energy = new_energy_total - movement_cost;
-            }
-      | false -> None)
-  | None -> Some t
+  | Some new_locations -> { t with locations = new_locations }
+  | None -> t
 
 let get_upgrade_cost colony (upgrade : Upgrades.t) =
   match upgrade with
@@ -230,7 +216,7 @@ let four_by_four = Board.create ~height:4 ~width:4
 let four_by_three = Board.create ~height:3 ~width:4
 let empty_board = Board.create ~height:0 ~width:0
 
-let print_moved_colonies ~(original_positions : Position.Set.t)
+(* let print_moved_colonies ~(original_positions : Position.Set.t)
     ~(board : Board.t) =
   let (orignal_colony : t) =
     {
@@ -398,4 +384,4 @@ let%expect_test "colony only able to move up" =
  (moved_colony.locations
   (((x 0) (y 2)) ((x 1) (y 1)) ((x 1) (y 2)) ((x 2) (y 1)) ((x 2) (y 2))
    ((x 3) (y 2)))))
-|}]
+|}] *)

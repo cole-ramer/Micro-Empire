@@ -389,18 +389,29 @@ let handle_key game char =
     | None -> None
   in
   let move_player direction =
-    match Colony.move game.player game.board direction with
-    | Some moved_colony ->
+    let moved_colony = Colony.move game.player game.board direction in
+    let movement_cost =
+      Upgrades.upgrade_effect ~size:moved_colony.size
+        ~level:moved_colony.movement_level Upgrades.Movement
+    in
+    match movement_cost >= moved_colony.energy with
+    | false ->
+        let moved_colony =
+          { moved_colony with energy = moved_colony.energy - movement_cost }
+        in
+
         Some
           ({ game with player = moved_colony }
           |> Environment.check_nutrient_consumptions
           |> Environment.handle_fights |> evaluate)
-    | None ->
+    | true ->
+        let moved_colony = { moved_colony with energy = 0 } in
         Some
           {
             game with
             game_state =
               Game_over ("GAME OVER: No energy left", game.player.peak_size);
+            player = moved_colony;
           }
   in
 
