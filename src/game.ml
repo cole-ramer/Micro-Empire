@@ -364,6 +364,160 @@ let evaluate game =
               { game with game_state }
           | false -> game))
 
+(* module Enemy_behaviour = struct
+  let get_avg_position (colony : Colony.t) =
+    let total_x, total_y =
+      Set.fold colony.locations ~init:(0, 0) ~f:(fun (x, y) position ->
+          (x + position.x, y + position.y))
+    in
+    { Position.x = total_x / colony.size; y = total_y / colony.size }
+
+  let get_avg_position_enemy_map game =
+    Map.map game.enemies ~f:(fun enemy -> get_avg_position enemy)
+
+  let nearest_nutrient nutrients (avg_colony_position : Position.t) =
+    Set.fold (Position.Set.union_list nutrients) ~init:(Int.max_value, None)
+      ~f:(fun (best_distance, best_position_option) nutrient ->
+        let distance = Position.get_distance avg_colony_position nutrient in
+        match distance < best_distance && distance > 0 with
+        | true -> (distance, Some nutrient)
+        | false -> (best_distance, best_position_option))
+
+  let nearest_smaller_colony enemy_map ~(player : Colony.t) average_position_map
+      ~enemy_id =
+    let moving_enemy = Map.find_exn enemy_map enemy_id in
+    let moving_enemy_avg_position = get_avg_position moving_enemy in
+    let moving_enemy_size = moving_enemy.size in
+    let nearest_enemy_distance, nearest_smaller_enemy_position =
+      Map.fold enemy_map ~init:(Int.max_value, None)
+        ~f:(fun ~key ~data (best_distance, best_enemy_option) ->
+          if key = enemy_id then (
+            print_endline "in da check";
+            (best_distance, best_enemy_option))
+          else
+            let current_distance =
+              Position.get_distance moving_enemy_avg_position
+                (Map.find_exn average_position_map key)
+            in
+            match
+              ( current_distance < best_distance && current_distance > 0,
+                moving_enemy_size > (Map.find_exn enemy_map key).size )
+            with
+            | true, true ->
+                (current_distance, Some (Map.find_exn average_position_map key))
+            | _, _ -> (best_distance, best_enemy_option))
+    in
+    let avg_player_position = get_avg_position player in
+    let distance_to_player =
+      Position.get_distance moving_enemy_avg_position avg_player_position
+    in
+    match (nearest_smaller_enemy_position, player.size < moving_enemy_size) with
+    | Some small_enemy_position, true -> (
+        match nearest_enemy_distance < distance_to_player with
+        | true -> (nearest_enemy_distance, Some small_enemy_position)
+        | false -> (distance_to_player, Some avg_player_position))
+    | None, false -> (nearest_enemy_distance, None)
+    | Some small_enemy_position, false ->
+        (nearest_enemy_distance, Some small_enemy_position)
+    | None, true -> (distance_to_player, Some avg_player_position)
+
+  let move_and_upgrade_colony ~game ~enemy_id ~(colony : Colony.t)
+      ~(source : Position.t) ~(target : Position.t) ~(distance : int) =
+    match
+      List.random_element (Dir.possible_dir_to_reach_target ~source ~target)
+    with
+    | Some direction -> (
+        let padded_cost_to_target =
+          distance
+          * Upgrades.upgrade_effect ~level:colony.movement_level
+              ~size:colony.size Upgrades.Movement
+          * 2
+        in
+        let hypothetical_colony =
+          { colony with energy = colony.energy - padded_cost_to_target }
+        in
+        match Colony.move colony game.board direction with
+        | None -> (game.enemies, [ enemy_id ])
+        | Some moved_colony -> (
+            match
+              List.random_element (Colony.possible_upgrades hypothetical_colony)
+            with
+            | None -> (Map.set game.enemies ~key:enemy_id ~data:moved_colony, [])
+            | Some upgrade ->
+                let upgraded_colony =
+                  (match upgrade with
+                  | Upgrades.Size ->
+                      Colony.upgrade ~board:game.board moved_colony upgrade
+                  | _ -> Colony.upgrade moved_colony upgrade)
+                  |> Option.value_exn
+                in
+
+                (Map.set game.enemies ~key:enemy_id ~data:upgraded_colony, [])))
+    | None ->
+        print_s
+          [%message
+            (Dir.possible_dir_to_reach_target ~source ~target : Dir.t list)];
+        raise_s
+          [%message
+            "closest enemey did not have any direction to move towards to meet \
+             it"]
+
+  let move_enemy game enemy_id avg_position_map =
+    let moving_colony = Map.find_exn game.enemies enemy_id in
+    let enemy_avg_position = Map.find_exn avg_position_map enemy_id in
+    let closest_nutrient_distance, closest_nutrient =
+      nearest_nutrient game.nutrients enemy_avg_position
+    in
+    let closest_nutrient =
+      match closest_nutrient with
+      | Some nutrient -> nutrient
+      | None ->
+          raise_s
+            [%message
+              "There must be at least one nutrient the colony could move \
+               towards"]
+    in
+    let closest_colony_distance, closest_colony_position =
+      nearest_smaller_colony game.enemies ~player:game.player avg_position_map
+        ~enemy_id
+    in
+    match
+      ( closest_nutrient_distance > closest_colony_distance,
+        closest_colony_position )
+    with
+    | true, Some colony_position ->
+        print_endline "colony";
+        move_and_upgrade_colony ~game ~enemy_id ~colony:moving_colony
+          ~source:enemy_avg_position ~target:colony_position
+          ~distance:closest_colony_distance
+    | false, Some _ | false, None ->
+        print_endline "Nutrient";
+        move_and_upgrade_colony ~game ~enemy_id ~colony:moving_colony
+          ~source:enemy_avg_position ~target:closest_nutrient
+          ~distance:closest_nutrient_distance
+    | true, None ->
+        raise_s
+          [%message
+            "there cannot be a distance to colony that is less than the \
+             distance to nutrient to a colony that is None"]
+
+  let move_all_enemies game =
+    let avg_position_map = get_avg_position_enemy_map game in
+    print_s [%message (avg_position_map : Position.t Core.Int.Map.t)];
+    let moved_and_upgraded_enemies_map, enemies_to_replace =
+      Map.fold game.enemies ~init:(game.enemies, [])
+        ~f:(fun ~key ~data (moved_enemies, enemies_to_replace) ->
+          let moved_enemies, new_enemies_toreplace =
+            move_enemy game key avg_position_map
+          in
+          (moved_enemies, enemies_to_replace @ new_enemies_toreplace))
+    in
+    List.fold enemies_to_replace
+      ~init:{ game with enemies = moved_and_upgraded_enemies_map }
+      ~f:(fun current_game enemy_id_to_remove ->
+        Spawning.Enemy.enemey_replace current_game ~enemy_id_to_remove)
+end *)
+
 let handle_key game char =
   let upgrade_player upgrade =
     match Colony.upgrade game.player upgrade with
@@ -454,3 +608,158 @@ let create ~width ~height =
 
   List.fold list_of_three ~init:game_with_nutrients ~f:(fun updated_game _ ->
       Spawning.Enemy.create_new_enemy updated_game)
+(* BEWARE: THIS IS A MONSTROSITY, ONLY THE MOST FEARLESS OF DEVELOPERS
+SHALL DARE ATTEMPT TO SALVAGE THIS BUG RIDDLED SHIT MESS*)
+(*module Enemy_behaviour = struct
+  let get_avg_position (colony : Colony.t) =
+    let total_x, total_y =
+      Set.fold colony.locations ~init:(0, 0) ~f:(fun (x, y) position ->
+          (x + position.x, y + position.y))
+    in
+    { Position.x = total_x / colony.size; y = total_y / colony.size }
+
+  let get_avg_position_enemy_map game =
+    Map.map game.enemies ~f:(fun enemy -> get_avg_position enemy)
+
+  let nearest_nutrient nutrients (avg_colony_position : Position.t) =
+    Set.fold (Position.Set.union_list nutrients) ~init:(Int.max_value, None)
+      ~f:(fun (best_distance, best_position_option) nutrient ->
+        let distance = Position.get_distance avg_colony_position nutrient in
+        match distance < best_distance && distance > 0 with
+        | true -> (distance, Some nutrient)
+        | false -> (best_distance, best_position_option))
+
+  let nearest_smaller_colony enemy_map ~(player : Colony.t) average_position_map
+      ~enemy_id =
+    let moving_enemy = Map.find_exn enemy_map enemy_id in
+    let moving_enemy_avg_position = get_avg_position moving_enemy in
+    let moving_enemy_size = moving_enemy.size in
+    let nearest_enemy_distance, nearest_smaller_enemy_position =
+      Map.fold enemy_map ~init:(Int.max_value, None)
+        ~f:(fun ~key ~data (best_distance, best_enemy_option) ->
+          if key = enemy_id then (
+            print_endline "in da check";
+            (best_distance, best_enemy_option))
+          else
+            let current_distance =
+              Position.get_distance moving_enemy_avg_position
+                (Map.find_exn average_position_map key)
+            in
+            match
+              ( current_distance < best_distance && current_distance > 0,
+                moving_enemy_size > (Map.find_exn enemy_map key).size )
+            with
+            | true, true ->
+                (current_distance, Some (Map.find_exn average_position_map key))
+            | _, _ -> (best_distance, best_enemy_option))
+    in
+    let avg_player_position = get_avg_position player in
+    let distance_to_player =
+      Position.get_distance moving_enemy_avg_position avg_player_position
+    in
+    match (nearest_smaller_enemy_position, player.size < moving_enemy_size) with
+    | Some small_enemy_position, true -> (
+        match nearest_enemy_distance < distance_to_player with
+        | true -> (nearest_enemy_distance, Some small_enemy_position)
+        | false -> (distance_to_player, Some avg_player_position))
+    | None, false -> (nearest_enemy_distance, None)
+    | Some small_enemy_position, false ->
+        (nearest_enemy_distance, Some small_enemy_position)
+    | None, true -> (distance_to_player, Some avg_player_position)
+
+  let move_and_upgrade_colony ~game ~enemy_id ~(colony : Colony.t)
+      ~(source : Position.t) ~(target : Position.t) ~(distance : int) =
+    match
+      List.random_element (Dir.possible_dir_to_reach_target ~source ~target)
+    with
+    | Some direction -> (
+        let padded_cost_to_target =
+          distance
+          * Upgrades.upgrade_effect ~level:colony.movement_level
+              ~size:colony.size Upgrades.Movement
+          * 2
+        in
+        let hypothetical_colony =
+          { colony with energy = colony.energy - padded_cost_to_target }
+        in
+        match Colony.move colony game.board direction with
+        | None -> (game.enemies, [ enemy_id ])
+        | Some moved_colony -> (
+            match
+              List.random_element (Colony.possible_upgrades hypothetical_colony)
+            with
+            | None -> (Map.set game.enemies ~key:enemy_id ~data:moved_colony, [])
+            | Some upgrade ->
+                let upgraded_colony =
+                  (match upgrade with
+                  | Upgrades.Size ->
+                      Colony.upgrade ~board:game.board moved_colony upgrade
+                  | _ -> Colony.upgrade moved_colony upgrade)
+                  |> Option.value_exn
+                in
+
+                (Map.set game.enemies ~key:enemy_id ~data:upgraded_colony, [])))
+    | None ->
+        print_s
+          [%message
+            (Dir.possible_dir_to_reach_target ~source ~target : Dir.t list)];
+        raise_s
+          [%message
+            "closest enemey did not have any direction to move towards to meet \
+             it"]
+
+  let move_enemy game enemy_id avg_position_map =
+    let moving_colony = Map.find_exn game.enemies enemy_id in
+    let enemy_avg_position = Map.find_exn avg_position_map enemy_id in
+    let closest_nutrient_distance, closest_nutrient =
+      nearest_nutrient game.nutrients enemy_avg_position
+    in
+    let closest_nutrient =
+      match closest_nutrient with
+      | Some nutrient -> nutrient
+      | None ->
+          raise_s
+            [%message
+              "There must be at least one nutrient the colony could move \
+               towards"]
+    in
+    let closest_colony_distance, closest_colony_position =
+      nearest_smaller_colony game.enemies ~player:game.player avg_position_map
+        ~enemy_id
+    in
+    match
+      ( closest_nutrient_distance > closest_colony_distance,
+        closest_colony_position )
+    with
+    | true, Some colony_position ->
+        print_endline "colony";
+        move_and_upgrade_colony ~game ~enemy_id ~colony:moving_colony
+          ~source:enemy_avg_position ~target:colony_position
+          ~distance:closest_colony_distance
+    | false, Some _ | false, None ->
+        print_endline "Nutrient";
+        move_and_upgrade_colony ~game ~enemy_id ~colony:moving_colony
+          ~source:enemy_avg_position ~target:closest_nutrient
+          ~distance:closest_nutrient_distance
+    | true, None ->
+        raise_s
+          [%message
+            "there cannot be a distance to colony that is less than the \
+             distance to nutrient to a colony that is None"]
+
+  let move_all_enemies game =
+    let avg_position_map = get_avg_position_enemy_map game in
+    print_s [%message (avg_position_map : Position.t Core.Int.Map.t)];
+    let moved_and_upgraded_enemies_map, enemies_to_replace =
+      Map.fold game.enemies ~init:(game.enemies, [])
+        ~f:(fun ~key ~data (moved_enemies, enemies_to_replace) ->
+          let moved_enemies, new_enemies_toreplace =
+            move_enemy game key avg_position_map
+          in
+          (moved_enemies, enemies_to_replace @ new_enemies_toreplace))
+    in
+    List.fold enemies_to_replace
+      ~init:{ game with enemies = moved_and_upgraded_enemies_map }
+      ~f:(fun current_game enemy_id_to_remove ->
+        Spawning.Enemy.enemey_replace current_game ~enemy_id_to_remove)
+end *)
