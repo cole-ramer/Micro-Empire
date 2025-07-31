@@ -30,6 +30,20 @@ let get_empty_positions (game : t) =
   in
   Set.diff all_positions_set all_occupied_positions
 
+let upgrade_board (game : t) =
+  let current_board = game.board.width in
+  if Colony.length game.player > current_board / 2 then
+    {
+      game with
+      board =
+        {
+          Board.height =
+            Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
+          width = Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
+        };
+    }
+  else game
+
 module Spawning = struct
   module Nutrient = struct
     let random_nutrient_size = Random.int 4
@@ -77,6 +91,8 @@ module Spawning = struct
     let starting_level spawn_size = Random.int ((spawn_size / 10) + 1)
 
     let create_new_enemy game =
+      let num_pos = Set.length (get_empty_positions game) in
+      let game = if num_pos < game.player.size then upgrade_board game else game in
       let loc_index = Random.int (Set.length (get_empty_positions game)) in
       let possible_starting_position =
         Set.nth (get_empty_positions game) loc_index
@@ -364,20 +380,6 @@ let evaluate game =
               { game with game_state }
           | false -> game))
 
-let upgrade_board (game : t) =
-  let current_board = game.board.width in
-  if Colony.length game.player > current_board / 2 then
-    {
-      game with
-      board =
-        {
-          Board.height =
-            Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
-          width = Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
-        };
-    }
-  else game
-
 let handle_key game char =
   let upgrade_player upgrade =
     match Colony.upgrade game.player upgrade with
@@ -438,7 +440,7 @@ let create ~width ~height =
         {
           size = 1;
           locations = Position.Set.of_list [ { x = 0; y = 0 } ];
-          energy = 1000;
+          energy = 500;
           nutrient_absorption_level = 1;
           decay_reduction_level = 1;
           strength_level = 1;

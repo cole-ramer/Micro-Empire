@@ -19,11 +19,11 @@ module Effect = struct
     int_of_float (Float.round_up (a *. log (b +. s)))
 
   let nutrient_absorption_gain (level : Level.t) =
-    10 + int_of_float (8. *. log (float_of_int (level + 1)))
+    2 + int_of_float (8. *. log (float_of_int (level + 1)))
 
   let movement_cost ~size ~level =
     let base_cost = 5.0 +. log (float_of_int (size + 1)) in
-    let reduction = float_of_int level *. 0.15 in
+    let reduction = float_of_int level *. 0.12 in
     int_of_float (base_cost *. (1.0 -. reduction))
 
   let get_strength_power ~size ~level =
@@ -46,7 +46,11 @@ module Effect = struct
     let base = 1.1 in
     let exponent = Float.of_int size *. ((10. -. Float.of_int level) /. 10.) in
     let amount =
-      Float.round_nearest (100. *. Float.( ** ) base exponent) |> Float.to_int
+      match
+        Float.round_nearest (100. *. Float.( ** ) base exponent) |> Float.to_int
+      with
+      | 0 -> 1
+      | int -> int
     in
     (Random.int amount + 1) / 300
 end
