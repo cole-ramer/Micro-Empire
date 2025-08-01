@@ -2,7 +2,7 @@ open! Core
 
 type t = {
   size : int;
-  locations : Position.Set.t;
+  locations : Position.Hash_Set.t;
   energy : int;
   nutrient_absorption_level : Upgrades.Level.t;
   decay_reduction_level : Upgrades.Level.t;
@@ -22,21 +22,20 @@ let move t (board : Board.t) (direction : Dir.t) : t =
     | Down -> Position.position_down
     | Up -> Position.position_up
   in
-  let new_locations_option =
-    Set.fold_until t.locations ~init:Position.Set.empty
-      ~f:(fun
-          (new_locations_set : Position.Set.t)
-          (current_location : Position.t)
-        ->
-        let possible_new_position = move_function current_location in
-        match Board.is_in_bounds board possible_new_position with
-        | true -> Continue (Set.add new_locations_set possible_new_position)
-        | false -> Stop None)
-      ~finish:(fun new_locations_set -> Some new_locations_set)
-  in
-  match new_locations_option with
-  | Some new_locations -> { t with locations = new_locations }
-  | None -> t
+  let is_in_bounds = ref true in
+  let new_locations = Position.Hash_Set.create () in
+  Hash_set.iter t.locations ~f:(fun position ->
+      match !is_in_bounds with
+      | true -> (
+          let possible_position = move_function position in
+          match Board.is_in_bounds board possible_position with
+          | true -> Hash_set.add new_locations possible_position
+          | false -> is_in_bounds := false)
+      | false -> ());
+
+  match !is_in_bounds with
+  | true -> { t with locations = new_locations }
+  | false -> t
 
 let get_upgrade_cost colony (upgrade : Upgrades.t) =
   match upgrade with
@@ -87,29 +86,11 @@ let upgrade ?(board : Board.t option) colony upgrade =
               strength_level = colony.strength_level + 1;
               energy = new_energy;
             }
-      | Size -> (
-          match board with
-          | Some b ->
-              let size_increase =
-                Upgrades.upgrade_effect ~size:colony.size upgrade
-              in
-              let new_locations =
-                Util.increase_size colony.locations Position.Set.empty b
-                  ~size_increase
-              in
-              Some
-                {
-                  colony with
-                  locations = new_locations;
-                  energy = new_energy;
-                  size = colony.size + size_increase;
-                  peak_size = max (colony.size + size_increase) colony.peak_size;
-                }
-          | None ->
-              raise_s
-                [%message
-                  "purchased the increased size upgrade but did not pass in \
-                   board as optional parameter"]))
+      | _ ->
+          raise_s
+            [%message
+              "purchased the increased size upgrade but did not pass in board \
+               as optional parameter"])
 
 let fight ~(colony1 : t) ~(colony2 : t) : t option * t option =
   let colony1_power =
@@ -124,8 +105,8 @@ let fight ~(colony1 : t) ~(colony2 : t) : t option * t option =
     (* print_s [%message (colony1 : t) (colony2 : t)]; *)
     colony1.energy + colony2.energy
   in
-  let combined_locations = Set.union colony1.locations colony2.locations in
-  let new_size = Set.length combined_locations in
+  let combined_locations = Hash_set.union colony1.locations colony2.locations in
+  let new_size = Hash_set.length combined_locations in
 
   match colony1_power > colony2_power with
   | true ->
@@ -164,7 +145,7 @@ let decay colony =
   let new_locations =
     Util.shrink_randomly colony.locations ~size_decrease:decay_amount
   in
-  let new_size = Set.length new_locations in
+  let new_size = Hash_set.length new_locations in
   { colony with locations = new_locations; size = new_size }
 
 let create_empty_colony ?peak_size () =
@@ -172,7 +153,7 @@ let create_empty_colony ?peak_size () =
   {
     energy = 0;
     size = 0;
-    locations = Position.Set.empty;
+    locations = Position.Hash_Set.create ();
     nutrient_absorption_level = 0;
     decay_reduction_level = 0;
     movement_level = 0;
@@ -181,22 +162,22 @@ let create_empty_colony ?peak_size () =
   }
 
 let center t =
-  if Set.length t.locations = 0 then { Position.x = 0; y = 0 }
+  if Hash_set.length t.locations = 0 then { Position.x = 0; y = 0 }
   else
-    let first = Option.value_exn (Set.nth t.locations 0) in
     let xmin, xmax, ymin, ymax =
-      Set.fold t.locations ~init:(first.x, first.x, first.y, first.y)
+      Hash_set.fold t.locations
+        ~init:(Int.max_value, Int.min_value, Int.max_value, Int.min_value)
         ~f:(fun (xmin, xmax, ymin, ymax) { Position.x; Position.y } ->
           (min xmin x, max xmax x, min ymin y, max ymax y))
     in
     { Position.x = (xmin + xmax) / 2; y = (ymin + ymax) / 2 }
 
 let length t =
-  if Set.length t.locations = 0 then 0
+  if Hash_set.length t.locations = 0 then 0
   else
-    let first = Option.value_exn (Set.nth t.locations 0) in
     let xmin, xmax, ymin, ymax =
-      Set.fold t.locations ~init:(first.x, first.x, first.y, first.y)
+      Hash_set.fold t.locations
+        ~init:(Int.max_value, Int.min_value, Int.max_value, Int.min_value)
         ~f:(fun (xmin, xmax, ymin, ymax) { Position.x; Position.y } ->
           (min xmin x, max xmax x, min ymin y, max ymax y))
     in
