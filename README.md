@@ -74,7 +74,7 @@
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
-This project was created as the final project of the [Jane Street Immersion Program](https://example.com) by contributors Cole Ramer and May Takahashi.
+This project was created as the final project of the [Jane Street Immersion Program](https://www.janestreet.com/join-jane-street/programs-and-events/jsip/) by contributors Cole Ramer and May Takahashi.
 
 ### Built With
 
