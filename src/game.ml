@@ -27,7 +27,12 @@ let get_empty_positions (game : t) =
     Set.union all_nutrients_set all_enemies_set
     |> Set.union game.player.locations
   in
-  Set.diff all_positions_set all_occupied_positions
+  let adj_to_occ =
+    Set.fold all_occupied_positions ~init:Position.Set.empty ~f:(fun acc pos ->
+        let adj = Position.adjacent_positions pos in
+        Set.union acc adj)
+  in
+  Set.diff all_positions_set adj_to_occ
 
 let upgrade_board (game : t) =
   let current_board = game.board.width in
@@ -84,7 +89,7 @@ module Spawning = struct
     let random_enemy_spawn_size player_size =
       match player_size with 0 -> 1 | _ -> Random.int player_size + 1
 
-    let random_enemy_energy spawn_size = Random.int (75 * spawn_size)
+    let random_enemy_energy spawn_size = Random.int (15 * spawn_size)
 
     let initial_locations starting_position (filled_positions : Position.Set.t)
         spawn_size board =
