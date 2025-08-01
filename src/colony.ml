@@ -86,29 +86,11 @@ let upgrade ?(board : Board.t option) colony upgrade =
               strength_level = colony.strength_level + 1;
               energy = new_energy;
             }
-      | Size -> (
-          match board with
-          | Some b ->
-              let size_increase =
-                Upgrades.upgrade_effect ~size:colony.size upgrade
-              in
-              let new_locations =
-                Util.increase_size colony.locations Position.Set.empty b
-                  ~size_increase
-              in
-              Some
-                {
-                  colony with
-                  locations = new_locations;
-                  energy = new_energy;
-                  size = colony.size + size_increase;
-                  peak_size = max (colony.size + size_increase) colony.peak_size;
-                }
-          | None ->
-              raise_s
-                [%message
-                  "purchased the increased size upgrade but did not pass in \
-                   board as optional parameter"]))
+      | _ ->
+          raise_s
+            [%message
+              "purchased the increased size upgrade but did not pass in board \
+               as optional parameter"])
 
 let fight ~(colony1 : t) ~(colony2 : t) : t option * t option =
   let colony1_power =
