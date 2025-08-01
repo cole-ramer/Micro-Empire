@@ -19,7 +19,7 @@ module Effect = struct
     int_of_float (Float.round_up (a *. log (b +. s)))
 
   let nutrient_absorption_gain (level : Level.t) =
-    2 + int_of_float (8. *. log (float_of_int (level + 1)))
+    2 + int_of_float (15. *. log (float_of_int (level + 1)))
 
   let movement_cost ~size ~level =
     let base_cost = 5.0 +. log (float_of_int (size + 1)) in

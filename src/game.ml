@@ -51,7 +51,10 @@ let upgrade_board (game : t) =
 
 module Spawning = struct
   module Nutrient = struct
-    let random_nutrient_size = Random.int 4
+    let random_nutrient_size game =
+      Float.to_int
+        ((1. +. Random.float 5.)
+        *. Float.log10 (Int.to_float game.player.size +. 1.))
 
     let new_nutrient_positions game =
       let empty_positions = get_empty_positions game in
@@ -61,7 +64,7 @@ module Spawning = struct
       match possible_starting_position with
       | None -> Position.Set.empty
       | Some starting_position ->
-          let spawn_size = random_nutrient_size in
+          let spawn_size = random_nutrient_size game in
           let inital_set = Set.add Position.Set.empty starting_position in
           let new_nutrients =
             Util.expand_randomly inital_set
@@ -83,14 +86,26 @@ module Spawning = struct
                 Set.remove nutrient_cluster nutrient_position_to_replace
             | false, _ -> nutrient_cluster)
       in
-      { game with nutrients = updated_nutrients }
+      let nutrients_to_produce =
+        game.board.width / 3 - List.length game.nutrients 
+      in
+      if nutrients_to_produce > 0 then
+        let empty_list = List.init nutrients_to_produce ~f:Fn.id in
+        List.fold empty_list ~init:{ game with nutrients = updated_nutrients }
+          ~f:(fun new_game _ ->
+            {
+              new_game with
+              nutrients =
+                List.append new_game.nutrients [new_nutrient_positions new_game];
+            })
+      else { game with nutrients = updated_nutrients }
   end
 
   module Enemy = struct
     let random_enemy_spawn_size player_size =
       match player_size with 0 -> 1 | _ -> Random.int player_size + 1
 
-    let random_enemy_energy spawn_size = Random.int (15 * spawn_size)
+    let random_enemy_energy spawn_size = Random.int (1 * spawn_size)
 
     let initial_locations starting_position (filled_positions : Position.Set.t)
         spawn_size board =
