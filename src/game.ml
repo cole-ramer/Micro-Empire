@@ -3,8 +3,7 @@ open! Core
 type t = {
   player : Colony.t;
   game_state : Game_state.t;
-  enemies : Colony.t Int.Map.t;
-  (* change to a list of sets*)
+  enemies : (int, Colony.t) Hashtbl.t;
   nutrients : Position.Set.t list;
   board : Board.t;
   creation_id_generator : Creation_id.t;

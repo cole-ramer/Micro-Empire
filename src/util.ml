@@ -51,8 +51,8 @@ let%expect_test "choose function" =
     ("choose 2 6" (5 4))
     ("choose 2 6" (1 0)) |}]
 
-let increase_size (colony_locations : Position.Set.t)
-    (currently_filled : Position.Set.t) (board : Board.t) ~size_increase =
+let increase_size (colony_locations : Position.Hash_Set.t)
+    (currently_filled : Position.Hash_Set.t) (board : Board.t) ~size_increase =
   let available_positions =
     Set.diff
       (Set.to_list colony_locations
@@ -82,15 +82,42 @@ let increase_size (colony_locations : Position.Set.t)
   in
   Set.union picked_positions colony_locations
 
-let rec expand_randomly (current_locations : Position.Set.t)
-    (filled_positions : Position.Set.t) (board : Board.t) ~size_increase =
-  if size_increase = 0 then current_locations
-  else
-    let current_locations =
-      increase_size current_locations filled_positions board ~size_increase:1
-    in
-    expand_randomly current_locations filled_positions board
-      ~size_increase:(size_increase - 1)
+let expand_randomly (current_locations : Position.Hash_Set.t)
+    (filled_positions : Position.Hash_Set.t) (board : Board.t) ~size_increase =
+  let new_positions = current_locations in
+  let available_positions = Position.Hash_Set.create () in
+  Hash_set.iter current_locations ~f:(fun colony_position ->
+      Set.iter (Position.adjacent_positions colony_position)
+        ~f:(fun adjacent_position ->
+          match
+            (not (Hash_set.mem filled_positions adjacent_position))
+            && Board.is_in_bounds board adjacent_position
+          with
+          | true -> Hash_set.add available_positions adjacent_position
+          | false -> ()));
+  List.init size_increase ~f:Fn.id
+  |> List.iter ~f:(fun _ ->
+         let pos_to_add =
+           Hash_set.fold_until available_positions
+             ~init:{ Position.x = -1; y = -1 }
+             ~f:(fun irrelevent_pos pos_to_add -> Stop pos_to_add)
+             ~finish:(fun _ ->
+               raise_s
+                 [%message
+                   "Should not have gottent to finish for adding position"])
+         in
+         if pos_to_add.x = -1 then
+           raise_s
+             [%message "expand did not select a pos_to_add in fold function"]
+         else Hash_set.add new_positions pos_to_add;
+         Set.iter (Position.adjacent_positions pos_to_add)
+           ~f:(fun adjacent_position ->
+             match
+               (not (Hash_set.mem filled_positions adjacent_position))
+               && Board.is_in_bounds board adjacent_position
+             with
+             | true -> Hash_set.add available_positions adjacent_position
+             | false -> ()))
 
 (* let rec dfs (starting_position : Position.t) ~(all_positions : Position.Set.t)
     ~(marked_positions : Position.Set.t) =
