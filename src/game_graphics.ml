@@ -95,6 +95,19 @@ let init_exn () =
   Graphics.auto_synchronize false;
   Game.create ~height ~width
 
+let main_menu () = 
+  let open Constants in
+  Graphics.set_color 0;
+  Graphics.fill_rect 0 0 (play_area_width + sidebar_width) play_area_height;
+  Graphics.set_color 16777215;
+  Graphics.moveto ((play_area_width + sidebar_width) / 2) (play_area_height / 2);
+  Graphics.set_text_size 35;
+  Graphics.draw_string "Micro Empire";
+  Graphics.set_color 3319890;
+  Graphics.moveto ((play_area_width + sidebar_width) / 2) (play_area_height / 2 - 40);
+  Graphics.set_text_size 10;
+  Graphics.draw_string "PRESS ANY KEY TO BEGIN"
+
 let render (game : Game.t) =
   block_size := 648 * 3 / 2 / game.board.width;
   Graphics.clear_graph ();
@@ -137,22 +150,19 @@ let render (game : Game.t) =
       "";
       "UPGRADE MUTATIONS";
       "(Press # to Upgrade)";
-      "1. Size : "
-      ^ Int.to_string
-          (Upgrades.upgrade_cost ~size:game.player.size Upgrades.Size);
-      "2. Strength: "
+      "1. Strength: "
       ^ Int.to_string
           (Upgrades.upgrade_cost ~level:game.player.strength_level
              Upgrades.Strength);
-      "3. Movement Cost Reduction : "
+      "2. Movement Cost Reduction : "
       ^ Int.to_string
           (Upgrades.upgrade_cost ~level:game.player.movement_level
              Upgrades.Movement);
-      "4. Nutrient Absorption: "
+      "3. Nutrient Absorption: "
       ^ Int.to_string
           (Upgrades.upgrade_cost ~level:game.player.nutrient_absorption_level
              Upgrades.Nutrient_absorption);
-      "5. Decay Reduction : "
+      "4. Decay Reduction : "
       ^ Int.to_string
           (Upgrades.upgrade_cost ~level:game.player.decay_reduction_level
              Upgrades.Decay_reduction);

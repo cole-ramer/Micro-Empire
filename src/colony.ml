@@ -45,7 +45,6 @@ let get_upgrade_cost colony (upgrade : Upgrades.t) =
       Upgrades.upgrade_cost ~level:colony.decay_reduction_level upgrade
   | Movement -> Upgrades.upgrade_cost ~level:colony.movement_level upgrade
   | Strength -> Upgrades.upgrade_cost ~level:colony.strength_level upgrade
-  | Size -> Upgrades.upgrade_cost ~size:colony.size upgrade
 
 let can_purchase_upgrade colony (upgrade : Upgrades.t) =
   colony.energy >= get_upgrade_cost colony upgrade
@@ -85,12 +84,7 @@ let upgrade ?(board : Board.t option) colony upgrade =
               colony with
               strength_level = colony.strength_level + 1;
               energy = new_energy;
-            }
-      | _ ->
-          raise_s
-            [%message
-              "purchased the increased size upgrade but did not pass in board \
-               as optional parameter"])
+            })
 
 let fight ~(colony1 : t) ~(colony2 : t) : t option * t option =
   let colony1_power =
@@ -189,7 +183,6 @@ let possible_upgrades colony =
       Upgrades.Nutrient_absorption;
       Upgrades.Nutrient_absorption;
       Upgrades.Movement;
-      Upgrades.Size;
       Upgrades.Strength;
     ] ~f:(fun upgrade -> can_purchase_upgrade colony upgrade)
 

@@ -4,20 +4,12 @@ module Level = struct
   type t = int [@@deriving sexp]
 end
 
-type t = Nutrient_absorption | Decay_reduction | Movement | Strength | Size
+type t = Nutrient_absorption | Decay_reduction | Movement | Strength
 [@@deriving sexp]
 
-let list_of = [ Nutrient_absorption; Decay_reduction; Movement; Strength; Size ]
+let list_of = [ Nutrient_absorption; Decay_reduction; Movement; Strength ]
 
 module Effect = struct
-  let get_num_of_added_cells current_size =
-    let open Float in
-    let s = float_of_int current_size in
-
-    let a = 1.0 in
-    let b = 1.0 in
-    int_of_float (Float.round_up (a *. log (b +. s)))
-
   let nutrient_absorption_gain (level : Level.t) =
     2 + int_of_float (15. *. log (float_of_int (level + 1)))
 
@@ -66,18 +58,6 @@ module Cost = struct
 
   let movement_reduction_cost level = 20 + (level * 15) + (level * level * 10)
   let strength_increase_cost level = 15 * int_of_float (2. ** float_of_int level)
-
-  let size_upgrade_cost current_size =
-    let open Float in
-    let s = float_of_int current_size in
-
-    let cells_added = Effect.get_num_of_added_cells current_size in
-
-    let base = 10.0 in
-    let k = 5.0 in
-    let cost_per_cell = base /. log (k +. s) in
-
-    Float.round (cost_per_cell *. float_of_int cells_added) |> Int.of_float
 end
 
 let upgrade_cost ?level ?size (upgrade : t) =
@@ -86,7 +66,6 @@ let upgrade_cost ?level ?size (upgrade : t) =
   | Decay_reduction, Some lev, None -> Cost.decay_reduction_cost lev
   | Movement, Some lev, None -> Cost.movement_reduction_cost lev
   | Strength, Some lev, None -> Cost.strength_increase_cost lev
-  | Size, None, Some s -> Cost.size_upgrade_cost s
   | _, _, _ ->
       raise_s
         [%message
@@ -104,7 +83,6 @@ let upgrade_effect ?level ?size (upgrade : t) =
       Effect.get_decay_amount ~size:s ~level:lev
   | Movement, Some lev, Some s -> Effect.movement_cost ~size:s ~level:lev
   | Strength, Some lev, Some s -> Effect.get_strength_power ~size:s ~level:lev
-  | Size, None, Some s -> Effect.get_num_of_added_cells s
   | _, _, _ ->
       raise_s
         [%message

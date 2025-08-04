@@ -38,9 +38,19 @@ let handle_keys (game : Game.t ref) ~game_over =
               game := new_game
           | None -> Game_graphics.set_error 15))
 
-let run () =
+let start_game () =
   let game : Game.t ref = ref (Game_graphics.init_exn ()) in
   Game_graphics.render !game;
   let game_over = ref false in
   handle_keys game ~game_over;
   update_environment game ~game_over
+
+let run () =
+  Game_graphics.main_menu ();
+  let start = ref false in
+  every ~stop:start 0.001 ~f:(fun () ->
+      match Game_graphics.read_key () with
+      | None -> ()
+      | Some key ->
+          start := true;
+          start_game ())

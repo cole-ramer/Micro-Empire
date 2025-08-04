@@ -472,15 +472,10 @@ let handle_key game char =
   in
 
   match char with
-  | '1' -> (
-      match Colony.upgrade ~board:game.board game.player Upgrades.Size with
-      | Some upgraded_size ->
-          Some (evaluate { game with player = upgraded_size } |> upgrade_board)
-      | None -> None)
-  | '2' -> upgrade_player Upgrades.Strength
-  | '3' -> upgrade_player Upgrades.Movement
-  | '4' -> upgrade_player Upgrades.Nutrient_absorption
-  | '5' -> upgrade_player Upgrades.Decay_reduction
+  | '1' -> upgrade_player Upgrades.Strength
+  | '2' -> upgrade_player Upgrades.Movement
+  | '3' -> upgrade_player Upgrades.Nutrient_absorption
+  | '4' -> upgrade_player Upgrades.Decay_reduction
   | 'w' -> move_player Dir.Up
   | 'a' -> move_player Dir.Left
   | 's' -> move_player Dir.Down
