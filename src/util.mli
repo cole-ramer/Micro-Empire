@@ -1,6 +1,6 @@
 open! Core
 
-val get_first_position_from_hash_set : Position.Hash_Set.t -> Position.t
+val get_random_position_from_hash_set : Position.Hash_Set.t -> Position.t
 
 (* Will do a more a intresting grow, expanding by size_increase to adjacent positions not only
 to the intial set, but to the intermediate sets as the Position.Set.t expands*)

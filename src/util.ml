@@ -14,18 +14,17 @@ let print_time_diff (message : string) (start_time : Time_ns.t) =
   in
   print_s [%message message time_diff]
 
-let get_first_position_from_hash_set (position_hash_set : Position.Hash_Set.t) =
-  let pos_to_add =
-    Hash_set.fold_until position_hash_set
-      ~init:{ Position.x = -1; y = -1 }
-      ~f:(fun irrelevent_pos pos_to_add -> Stop pos_to_add)
-      ~finish:(fun _ ->
-        raise_s
-          [%message "Should not have gottent to finish for adding position"])
-  in
-  if pos_to_add.x = -1 then
-    raise_s [%message "expand did not select a pos_to_add in fold function"]
-  else pos_to_add
+let get_random_position_from_hash_set (position_hash_set : Position.Hash_Set.t)
+    =
+  let random_index = Random.int (Hash_set.length position_hash_set) in
+
+  Hash_set.fold_until position_hash_set ~init:0
+    ~f:(fun current_index pos_to_add ->
+      match current_index = random_index with
+      | true -> Stop pos_to_add
+      | false -> Continue (current_index + 1))
+    ~finish:(fun _ ->
+      raise_s [%message "Should not have gottent to finish for adding position"])
 
 let expand_randomly ~(current_colony_locations : Position.Hash_Set.t)
     ~(all_game_filled_positions : Position.Hash_Set.t) (board : Board.t)
@@ -44,7 +43,7 @@ let expand_randomly ~(current_colony_locations : Position.Hash_Set.t)
   List.init size_increase ~f:Fn.id
   |> List.iter ~f:(fun _ ->
          let pos_to_add =
-           get_first_position_from_hash_set available_positions
+           get_random_position_from_hash_set available_positions
          in
          Hash_set.add new_positions pos_to_add;
          Set.iter (Position.adjacent_positions pos_to_add)
@@ -170,7 +169,7 @@ let shrink_randomly (colony_locations : Position.Hash_Set.t) ~size_decrease =
               | false -> (
                   let vistable =
                     dfs positions_after_decay
-                      (get_first_position_from_hash_set positions_after_decay)
+                      (get_random_position_from_hash_set positions_after_decay)
                   in
                   match
                     Hash_set.length vistable

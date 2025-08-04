@@ -63,7 +63,7 @@ module Spawning = struct
     let new_nutrient_positions game =
       let empty_positions, filled_positions = get_empty_positions game in
       let starting_position =
-        Util.get_first_position_from_hash_set empty_positions
+        Util.get_random_position_from_hash_set empty_positions
       in
 
       let spawn_size = random_nutrient_size game in
@@ -130,7 +130,7 @@ module Spawning = struct
         else game
       in
       let starting_position =
-        Util.get_first_position_from_hash_set empty_positions
+        Util.get_random_position_from_hash_set empty_positions
       in
       let initial_locations = Position.Hash_Set.create () in
       Hash_set.add initial_locations starting_position;
