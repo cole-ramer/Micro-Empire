@@ -1,12 +1,12 @@
 open! Core
 
 module Enemy_target = struct
-  (* module Target_type = struct
-    type t = Enemy | Nutrient
-  end *)
+  module Target_type = struct
+    type t = Enemy | Nutrient [@@deriving equal, sexp]
+  end
 
   type t = {
-    (* target_type : Target_type.t; *)
+    target_type : Target_type.t;
     closest_pos_in_source_colony : Position.t;
     closest_pos_in_target_colony : Position.t;
     distance : int;
@@ -216,6 +216,7 @@ module Environment = struct
                         Enemy_target.closest_pos_in_target_colony =
                           { x = -1; y = -1 };
                         distance = Int.max_value;
+                        target_type = Nutrient;
                       },
                       current_game )
                   ~f:(fun
@@ -245,6 +246,7 @@ module Environment = struct
                             closest_pos_in_target_colony =
                               current_nutrient_position;
                             distance = current_distance;
+                            target_type = Nutrient;
                           },
                           inner_game )
                     | _, false -> (best_nutrient_target_so_far, inner_game))
@@ -270,6 +272,7 @@ module Environment = struct
             Enemy_target.closest_pos_in_source_colony = { x = -1; y = -1 };
             Enemy_target.closest_pos_in_target_colony = { x = -1; y = -1 };
             Enemy_target.distance = Int.max_value;
+            target_type = Enemy;
           }
         ~f:(fun best_target_so_far position_in_colony1 ->
           let inner_best_target =
@@ -287,6 +290,7 @@ module Environment = struct
                         Enemy_target.closest_pos_in_target_colony =
                           position_in_colony2;
                         distance;
+                        target_type = Enemy;
                       }
                 | _ -> (
                     match distance < inner_best_target_so_far.distance with
@@ -298,6 +302,7 @@ module Environment = struct
                             Enemy_target.closest_pos_in_target_colony =
                               position_in_colony2;
                             distance;
+                            target_type = Enemy;
                           }
                     | false -> Continue inner_best_target_so_far))
               ~finish:(fun target -> target)
@@ -322,7 +327,12 @@ module Environment = struct
       | _, Some current_best_total_target -> (
           match
             best_distance_colony1_colony2 < current_best_total_target.distance
-            && colony1.size > colony2.size
+            && colony1.size >= colony2.size
+            || Enemy_target.Target_type.equal
+                 current_best_total_target.target_type Nutrient
+               && current_best_total_target.distance
+                  - best_distance_colony1_colony2
+                  <= colony1.size - colony2.size
           with
           | true ->
               Hashtbl.set enemy_target_map ~key:colony1_id
