@@ -1,9 +1,23 @@
 open! Core
 
+module Enemy_target = struct
+  (* module Target_type = struct
+    type t = Enemy | Nutrient
+  end *)
+
+  type t = {
+    (* target_type : Target_type.t; *)
+    closest_pos_in_source_colony : Position.t;
+    closest_pos_in_target_colony : Position.t;
+    distance : int;
+  }
+end
+
 type t = {
   player : Colony.t;
   game_state : Game_state.t;
   enemies : (int, Colony.t) Hashtbl.t;
+  enemy_targets : (int, Enemy_target.t) Hashtbl.t;
   nutrients : Position.Hash_Set.t list;
   board : Board.t;
   creation_id_generator : Creation_id.t;
@@ -152,11 +166,13 @@ module Spawning = struct
       in
       let new_enemy_id = Creation_id.next_id game.creation_id_generator in
       let _ = Hashtbl.add game.enemies ~key:new_enemy_id ~data:new_enemy in
+
       game
 
     let enemy_replace game ~(enemy_id_to_remove : int) =
       let game_with_new_enemy = create_new_enemy game in
       Hashtbl.remove game_with_new_enemy.enemies enemy_id_to_remove;
+
       game_with_new_enemy
   end
 end
@@ -191,24 +207,128 @@ module Environment = struct
         ~f:(fun ~key ~data current_game ->
           Hash_set.fold data.locations ~init:current_game
             ~f:(fun current_game enemy_position ->
-              match Hash_set.mem old_nutrient_locations enemy_position with
+              let best_target_to_nutrient, game =
+                Hash_set.fold old_nutrient_locations
+                  ~init:
+                    ( {
+                        Enemy_target.closest_pos_in_source_colony =
+                          { x = -1; y = -1 };
+                        Enemy_target.closest_pos_in_target_colony =
+                          { x = -1; y = -1 };
+                        distance = Int.max_value;
+                      },
+                      current_game )
+                  ~f:(fun
+                      (best_nutrient_target_so_far, inner_game)
+                      current_nutrient_position
+                    ->
+                    let current_distance =
+                      Position.get_distance enemy_position
+                        current_nutrient_position
+                    in
+                    match
+                      ( current_distance,
+                        current_distance < best_nutrient_target_so_far.distance
+                      )
+                    with
+                    | 0, _ ->
+                        let energized_enemy = Colony.consume_nutrient data in
+                        Hashtbl.set inner_game.enemies ~key
+                          ~data:energized_enemy;
+                        ( best_nutrient_target_so_far,
+                          Spawning.Nutrient.nutrient_replace inner_game
+                            enemy_position )
+                    | _, true ->
+                        ( {
+                            Enemy_target.closest_pos_in_source_colony =
+                              enemy_position;
+                            closest_pos_in_target_colony =
+                              current_nutrient_position;
+                            distance = current_distance;
+                          },
+                          inner_game )
+                    | _, false -> (best_nutrient_target_so_far, inner_game))
+              in
+              match best_target_to_nutrient.distance = Int.max_value with
               | true ->
-                  let energized_enemy = Colony.consume_nutrient data in
-
-                  Hashtbl.set current_game.enemies ~key ~data:energized_enemy;
-
-                  Spawning.Nutrient.nutrient_replace current_game enemy_position
-              | false -> current_game))
+                  raise_s
+                    [%message "distance to nutirent should not be infinite"]
+              | false ->
+                  Hashtbl.set game.enemy_targets ~key
+                    ~data:best_target_to_nutrient;
+                  game))
     in
     new_game
 
-  let two_colonies_overlap ~(colony1 : Colony.t) ~(colony2 : Colony.t) =
-    Hash_set.fold_until colony1.locations ~init:false
-      ~f:(fun do_overlap position_in_colony1 ->
-        match Hash_set.mem colony2.locations position_in_colony1 with
-        | true -> Stop true
-        | false -> Continue false)
-      ~finish:(fun bool -> bool)
+  let colonies_overlap_and_update_targets
+      (enemy_target_map : (int, Enemy_target.t) Hashtbl.t) ~(colony1 : Colony.t)
+      ~(colony1_id : int) ~(colony2 : Colony.t) =
+    let best_target_between_colonies =
+      Hash_set.fold_until colony1.locations
+        ~init:
+          {
+            Enemy_target.closest_pos_in_source_colony = { x = -1; y = -1 };
+            Enemy_target.closest_pos_in_target_colony = { x = -1; y = -1 };
+            Enemy_target.distance = Int.max_value;
+          }
+        ~f:(fun best_target_so_far position_in_colony1 ->
+          let inner_best_target =
+            Hash_set.fold_until colony2.locations ~init:best_target_so_far
+              ~f:(fun inner_best_target_so_far position_in_colony2 ->
+                let distance =
+                  Position.get_distance position_in_colony1 position_in_colony2
+                in
+                match distance with
+                | 0 ->
+                    Stop
+                      {
+                        Enemy_target.closest_pos_in_source_colony =
+                          position_in_colony1;
+                        Enemy_target.closest_pos_in_target_colony =
+                          position_in_colony2;
+                        distance;
+                      }
+                | _ -> (
+                    match distance < inner_best_target_so_far.distance with
+                    | true ->
+                        Continue
+                          {
+                            Enemy_target.closest_pos_in_source_colony =
+                              position_in_colony1;
+                            Enemy_target.closest_pos_in_target_colony =
+                              position_in_colony2;
+                            distance;
+                          }
+                    | false -> Continue inner_best_target_so_far))
+              ~finish:(fun target -> target)
+          in
+          if inner_best_target.distance = Int.max_value then
+            raise_s [%message "distance should not be equivlent to max_value"]
+          else
+            match inner_best_target.distance with
+            | 0 -> Stop inner_best_target
+            | _ -> Continue inner_best_target)
+        ~finish:(fun best_target -> best_target)
+    in
+    let best_distance_colony1_colony2 = best_target_between_colonies.distance in
+    match
+      (best_distance_colony1_colony2, Hashtbl.find enemy_target_map colony1_id)
+    with
+    | 0, _ -> true
+    | _, None ->
+        Hashtbl.set enemy_target_map ~key:colony1_id
+          ~data:best_target_between_colonies;
+        false
+    | _, Some current_best_total_target -> (
+        match
+          best_distance_colony1_colony2 < current_best_total_target.distance
+          && colony1.size > colony2.size
+        with
+        | true ->
+            Hashtbl.set enemy_target_map ~key:colony1_id
+              ~data:best_target_between_colonies;
+            false
+        | false -> false)
 
   let%expect_test "colonies overlap on shared position" =
     let colony1 = Colony.create_empty_colony () in
@@ -229,7 +349,12 @@ module Environment = struct
             [ { Position.x = 0; y = 0 }; { Position.x = 0; y = 1 } ];
       }
     in
-    print_s [%message (two_colonies_overlap ~colony1 ~colony2 : bool)];
+    print_s
+      [%message
+        (colonies_overlap_and_update_targets
+           (Hashtbl.create (module Int))
+           ~colony1 ~colony1_id:1 ~colony2
+          : bool)];
     [%expect {| true |}]
 
   let%expect_test "colonies do not overlap" =
@@ -251,7 +376,12 @@ module Environment = struct
             [ { Position.x = 1; y = 0 }; { Position.x = 1; y = 1 } ];
       }
     in
-    print_s [%message (two_colonies_overlap ~colony1 ~colony2 : bool)];
+    print_s
+      [%message
+        (colonies_overlap_and_update_targets
+           (Hashtbl.create (module Int))
+           ~colony1 ~colony1_id:1 ~colony2
+          : bool)];
     [%expect {| false |}]
 
   let%expect_test "empty colony does not overlap" =
@@ -263,16 +393,26 @@ module Environment = struct
         locations = Position.Hash_Set.of_list [ { Position.x = 1; y = 1 } ];
       }
     in
-    print_s [%message (two_colonies_overlap ~colony1 ~colony2 : bool)];
+    print_s
+      [%message
+        (colonies_overlap_and_update_targets
+           (Hashtbl.create (module Int))
+           ~colony1 ~colony1_id:1 ~colony2
+          : bool)];
     [%expect {| false |}]
 
   let%expect_test "both colonies empty" =
     let colony1 = Colony.create_empty_colony () in
     let colony2 = Colony.create_empty_colony () in
-    print_s [%message (two_colonies_overlap ~colony1 ~colony2 : bool)];
+    print_s
+      [%message
+        (colonies_overlap_and_update_targets
+           (Hashtbl.create (module Int))
+           ~colony1 ~colony1_id:1 ~colony2
+          : bool)];
     [%expect {| false |}]
 
-  let handle_fights_for_one_enemy_colony ~enemy_id ~enemy_colony
+  let handle_fights_for_one_enemy_colony enemy_targets ~enemy_id ~enemy_colony
       (current_enemy_map : (int, Colony.t) Hashtbl.t) :
       (int, Colony.t) Hashtbl.t =
     let map_after_player_fights = Hashtbl.copy current_enemy_map in
@@ -281,7 +421,9 @@ module Environment = struct
         let enemy2 = data in
         match
           Hashtbl.mem map_after_player_fights enemy_id
-          && two_colonies_overlap ~colony1:enemy_colony ~colony2:enemy2
+          && colonies_overlap_and_update_targets
+               (Hashtbl.create (module Int))
+               ~colony1:enemy_colony ~colony1_id:enemy_id ~colony2:enemy2
           && not (enemy_id = enemy2_id)
         with
         | false -> ()
@@ -322,7 +464,8 @@ module Environment = struct
           | None -> None
           | Some current_player -> (
               match
-                two_colonies_overlap ~colony1:current_player ~colony2:data
+                colonies_overlap_and_update_targets game.enemy_targets
+                  ~colony1:data ~colony1_id:key ~colony2:current_player
               with
               | false -> Some current_player
               | true -> (
@@ -352,8 +495,8 @@ module Environment = struct
         ~f:(fun ~key ~data current_enemy_map ->
           match Hashtbl.mem current_enemy_map key with
           | true ->
-              handle_fights_for_one_enemy_colony ~enemy_id:key
-                ~enemy_colony:data current_enemy_map
+              handle_fights_for_one_enemy_colony game.enemy_targets
+                ~enemy_id:key ~enemy_colony:data current_enemy_map
           | false -> current_enemy_map)
     in
 
@@ -422,13 +565,20 @@ let upgrade_board (game : t) =
 
 module Enemy_behaviour = struct
   let move_all_enemies game =
-    let table_copy = Hashtbl.copy game.enemies in
+    let table_copy = Hashtbl.copy game.enemy_targets in
     Hashtbl.iteri table_copy ~f:(fun ~key ~data ->
         match Random.int 5 with
         | 0 ->
+            let direction_towards_target =
+              List.random_element_exn
+                (Dir.possible_dir_to_reach_target
+                   ~source:data.closest_pos_in_source_colony
+                   ~target:data.closest_pos_in_target_colony)
+            in
             let new_colony =
-              Colony.move data game.board
-                (List.random_element_exn Dir.directions_list)
+              Colony.move
+                (Hashtbl.find_exn game.enemies key)
+                game.board direction_towards_target
             in
             Hashtbl.set game.enemies ~key ~data:new_colony
         | _ -> ())
@@ -486,19 +636,17 @@ let handle_key game char =
        |> Environment.handle_fights |> upgrade_board |> evaluate)
 
 let update_environment game =
-  let start_time = Time_ns.now () in
+  let game_after_fights = Environment.handle_fights game in
+  let game =
+    { game_after_fights with enemy_targets = Hashtbl.create (module Int) }
+  in
   let nutrients_consumed = Environment.check_nutrient_consumptions game in
-  Util.print_time_diff "nutrients_consumed" start_time;
-  let start_time = Time_ns.now () in
-  let game_after_fights = Environment.handle_fights nutrients_consumed in
-  Util.print_time_diff "fights_handled" start_time;
-  let start_time = Time_ns.now () in
-  Enemy_behaviour.move_all_enemies game_after_fights;
-  Util.print_time_diff "enemy moves" start_time;
-  let start_time = Time_ns.now () in
-  let player_after_decay = Colony.decay game_after_fights.player in
-  Util.print_time_diff "player decay" start_time;
-  let game = evaluate { game_after_fights with player = player_after_decay } in
+
+  Enemy_behaviour.move_all_enemies nutrients_consumed;
+
+  let player_after_decay = Colony.decay nutrients_consumed.player in
+
+  let game = evaluate { nutrients_consumed with player = player_after_decay } in
 
   game
 
@@ -522,6 +670,7 @@ let create ~width ~height =
         };
       game_state = Game_state.In_progress;
       enemies = Hashtbl.create (module Int);
+      enemy_targets = Hashtbl.create (module Int);
       nutrients = [ Position.Hash_Set.create () ];
       board = { width; height };
       creation_id_generator;

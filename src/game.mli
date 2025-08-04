@@ -1,9 +1,14 @@
 open! Core
 
+module Enemy_target : sig
+  type t
+end
+
 type t = {
   player : Colony.t;
   game_state : Game_state.t;
   enemies : (int, Colony.t) Hashtbl.t;
+  enemy_targets : (int, Enemy_target.t) Hashtbl.t;
   nutrients : Position.Hash_Set.t list;
   board : Board.t;
   creation_id_generator : Creation_id.t;
