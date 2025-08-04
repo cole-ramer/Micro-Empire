@@ -302,33 +302,33 @@ module Environment = struct
                     | false -> Continue inner_best_target_so_far))
               ~finish:(fun target -> target)
           in
-          if inner_best_target.distance = Int.max_value then
-            raise_s [%message "distance should not be equivlent to max_value"]
-          else
-            match inner_best_target.distance with
-            | 0 -> Stop inner_best_target
-            | _ -> Continue inner_best_target)
+
+          match inner_best_target.distance with
+          | 0 -> Stop inner_best_target
+          | _ -> Continue inner_best_target)
         ~finish:(fun best_target -> best_target)
     in
     let best_distance_colony1_colony2 = best_target_between_colonies.distance in
-    match
-      (best_distance_colony1_colony2, Hashtbl.find enemy_target_map colony1_id)
-    with
-    | 0, _ -> true
-    | _, None ->
-        Hashtbl.set enemy_target_map ~key:colony1_id
-          ~data:best_target_between_colonies;
-        false
-    | _, Some current_best_total_target -> (
-        match
-          best_distance_colony1_colony2 < current_best_total_target.distance
-          && colony1.size > colony2.size
-        with
-        | true ->
-            Hashtbl.set enemy_target_map ~key:colony1_id
-              ~data:best_target_between_colonies;
-            false
-        | false -> false)
+    if best_distance_colony1_colony2 = Int.max_value then false
+    else
+      match
+        (best_distance_colony1_colony2, Hashtbl.find enemy_target_map colony1_id)
+      with
+      | 0, _ -> true
+      | _, None ->
+          Hashtbl.set enemy_target_map ~key:colony1_id
+            ~data:best_target_between_colonies;
+          false
+      | _, Some current_best_total_target -> (
+          match
+            best_distance_colony1_colony2 < current_best_total_target.distance
+            && colony1.size > colony2.size
+          with
+          | true ->
+              Hashtbl.set enemy_target_map ~key:colony1_id
+                ~data:best_target_between_colonies;
+              false
+          | false -> false)
 
   let%expect_test "colonies overlap on shared position" =
     let colony1 = Colony.create_empty_colony () in
