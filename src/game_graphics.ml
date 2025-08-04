@@ -102,15 +102,15 @@ let render (game : Game.t) =
   Graphics.set_color 0;
   Graphics.fill_rect 0 0 play_area_width play_area_height;
 
-  Set.iter game.player.locations ~f:(fun { x; y } ->
+  Hash_set.iter game.player.locations ~f:(fun { x; y } ->
       draw_block { x; y } ~color:1352489 ~board_size:game.board.width
         ~header:false game.player);
-  Map.iter game.enemies ~f:(fun enemy ->
-      Set.iter enemy.locations ~f:(fun { x; y } ->
+  Hashtbl.iter game.enemies ~f:(fun enemy ->
+      Hash_set.iter enemy.locations ~f:(fun { x; y } ->
           draw_block { x; y } ~color:10687515 ~board_size:game.board.width
             ~header:false game.player));
   List.iter game.nutrients ~f:(fun nutrient ->
-      Set.iter nutrient ~f:(fun { x; y } ->
+      Hash_set.iter nutrient ~f:(fun { x; y } ->
           draw_block { x; y } ~color:15248896 ~board_size:game.board.width
             ~header:false game.player));
   draw_block
