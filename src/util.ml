@@ -182,34 +182,3 @@ let shrink_randomly (colony_locations : Position.Hash_Set.t) ~size_decrease =
         ~finish:(fun decrease_left -> print_s [%message (decrease_left : int)]);
       print_time_diff "decay" start_time;
       positions_after_decay
-(* let shuffled_position_array = knuth_shuffle (Set.to_array colony_locations) in
-  let final_locations =
-    Array.fold_until shuffled_position_array
-      ~init:(colony_locations, size_decrease)
-      ~f:(fun (current_positions_left, left_to_remove) possible_position ->
-        match left_to_remove > 0 with
-        | false -> Stop current_positions_left
-        | true -> (
-            let set_with_pos_removed =
-              Set.remove current_positions_left possible_position
-            in
-            match Set.choose set_with_pos_removed with
-            | Some starting_position -> (
-                let vistable = dfs set_with_pos_removed starting_position in
-                match
-                  Set.length set_with_pos_removed = Hash_set.length vistable
-                with
-                | true -> Continue (set_with_pos_removed, left_to_remove - 1)
-                | false -> Continue (current_positions_left, left_to_remove))
-            | None -> (
-                match Set.length current_positions_left = 1 with
-                | true -> Stop Position.Set.empty
-                | false ->
-                    raise_s
-                      [%message
-                        "was unable to choose from a set that was not of \
-                         length 1"])))
-      ~finish:(fun (positions_left, _) -> positions_left)
-  in
-  print_time_diff "decay fold" start_time;
-  final_locations *)

@@ -187,7 +187,7 @@ module Environment = struct
 
     (* handles consumption for all the enemies*)
     let new_game =
-      Hashtbl.fold game.enemies ~init:new_game
+      Hashtbl.fold (Hashtbl.copy game.enemies) ~init:new_game
         ~f:(fun ~key ~data current_game ->
           Hash_set.fold data.locations ~init:current_game
             ~f:(fun current_game enemy_position ->
@@ -420,19 +420,19 @@ let upgrade_board (game : t) =
     }
   else game
 
-(* module Enemy_behaviour = struct
+module Enemy_behaviour = struct
   let move_all_enemies game =
-    let random = Random.int 9 in
-    match random = 0 with
-    | true ->
-        let moved_enemies =
-          Map.map game.enemies ~f:(fun enemy ->
-              let direction = List.random_element_exn Dir.directions_list in
-              Colony.move enemy game.board direction)
-        in
-        { game with enemies = moved_enemies }
-    | false -> game
-end *)
+    let table_copy = Hashtbl.copy game.enemies in
+    Hashtbl.iteri table_copy ~f:(fun ~key ~data ->
+        match Random.int 5 with
+        | 0 ->
+            let new_colony =
+              Colony.move data game.board
+                (List.random_element_exn Dir.directions_list)
+            in
+            Hashtbl.set game.enemies ~key ~data:new_colony
+        | _ -> ())
+end
 
 let handle_key game char =
   let upgrade_player upgrade =
@@ -492,9 +492,9 @@ let update_environment game =
   let start_time = Time_ns.now () in
   let game_after_fights = Environment.handle_fights nutrients_consumed in
   Util.print_time_diff "fights_handled" start_time;
-  (* let start_time = Time_ns.now () in *)
-  (* let game_after_moves = Enemy_behaviour.move_all_enemies game_after_fights in
-  Util.print_time_diff "enemy moves" start_time; *)
+  let start_time = Time_ns.now () in
+  Enemy_behaviour.move_all_enemies game_after_fights;
+  Util.print_time_diff "enemy moves" start_time;
   let start_time = Time_ns.now () in
   let player_after_decay = Colony.decay game_after_fights.player in
   Util.print_time_diff "player decay" start_time;
