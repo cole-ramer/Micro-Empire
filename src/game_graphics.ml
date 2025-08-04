@@ -86,8 +86,6 @@ let init_exn () =
   let open Constants in
   (* Should raise if called twice *)
   if !only_one then failwith "Can only call init_exn once" else only_one := true;
-  Graphics.open_graph
-    (Printf.sprintf " %dx%d" (play_area_width + sidebar_width) play_area_height);
   let height = virtual_map_height in
   let width = virtual_map_width in
   Graphics.set_window_title "Micro Empire";
@@ -97,14 +95,16 @@ let init_exn () =
 
 let main_menu () = 
   let open Constants in
+  Graphics.open_graph
+    (Printf.sprintf " %dx%d" (play_area_width + sidebar_width) play_area_height);
   Graphics.set_color 0;
   Graphics.fill_rect 0 0 (play_area_width + sidebar_width) play_area_height;
   Graphics.set_color 16777215;
-  Graphics.moveto ((play_area_width + sidebar_width) / 2) (play_area_height / 2);
-  Graphics.set_text_size 35;
+  Graphics.moveto ((play_area_width + sidebar_width) / 2 - 75) (play_area_height / 2);
+  Graphics.set_text_size 100;
   Graphics.draw_string "Micro Empire";
   Graphics.set_color 3319890;
-  Graphics.moveto ((play_area_width + sidebar_width) / 2) (play_area_height / 2 - 40);
+  Graphics.moveto ((play_area_width + sidebar_width) / 2 - 75) (play_area_height / 2 - 40);
   Graphics.set_text_size 10;
   Graphics.draw_string "PRESS ANY KEY TO BEGIN"
 

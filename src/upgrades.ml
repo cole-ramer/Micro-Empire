@@ -60,33 +60,23 @@ module Cost = struct
   let strength_increase_cost level = 15 * int_of_float (2. ** float_of_int level)
 end
 
-let upgrade_cost ?level ?size (upgrade : t) =
-  match (upgrade, level, size) with
-  | Nutrient_absorption, Some lev, None -> Cost.nutrient_absorption_cost lev
-  | Decay_reduction, Some lev, None -> Cost.decay_reduction_cost lev
-  | Movement, Some lev, None -> Cost.movement_reduction_cost lev
-  | Strength, Some lev, None -> Cost.strength_increase_cost lev
-  | _, _, _ ->
-      raise_s
-        [%message
-          (level : int option)
-            (size : int option)
-            (upgrade : t)
-            "invalid arguments to upgrade cost. Getting cost for size increase \
-             should only pass in the size optional argument. For all other \
-             upgrades only pass in the level optional argument "]
+let upgrade_cost ~(level : int) (upgrade : t) =
+  match (upgrade, level) with
+  | Nutrient_absorption, lev -> Cost.nutrient_absorption_cost lev
+  | Decay_reduction, lev -> Cost.decay_reduction_cost lev
+  | Movement, lev -> Cost.movement_reduction_cost lev
+  | Strength, lev -> Cost.strength_increase_cost lev
 
-let upgrade_effect ?level ?size (upgrade : t) =
-  match (upgrade, level, size) with
-  | Nutrient_absorption, Some lev, None -> Effect.nutrient_absorption_gain lev
-  | Decay_reduction, Some lev, Some s ->
-      Effect.get_decay_amount ~size:s ~level:lev
-  | Movement, Some lev, Some s -> Effect.movement_cost ~size:s ~level:lev
-  | Strength, Some lev, Some s -> Effect.get_strength_power ~size:s ~level:lev
-  | _, _, _ ->
+let upgrade_effect ~level ?size (upgrade : t) =
+  match (upgrade, size) with
+  | Nutrient_absorption, None -> Effect.nutrient_absorption_gain level
+  | Decay_reduction, Some s ->
+      Effect.get_decay_amount ~size:s ~level
+  | Movement, Some s -> Effect.movement_cost ~size:s ~level
+  | Strength, Some s -> Effect.get_strength_power ~size:s ~level
+  | _, _->
       raise_s
         [%message
-          (level : int option)
             (size : int option)
             (upgrade : t)
             "invalid arguments to upgrade effect. Getting effect for size \
