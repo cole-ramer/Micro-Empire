@@ -100,12 +100,26 @@ let main_menu () =
   Graphics.set_color 0;
   Graphics.fill_rect 0 0 (play_area_width + sidebar_width) play_area_height;
   Graphics.set_color 16777215;
-  Graphics.moveto ((play_area_width + sidebar_width) / 2 - 75) (play_area_height / 2);
-  Graphics.set_text_size 100;
+  Graphics.moveto ((play_area_width + sidebar_width) / 2 - 50) (play_area_height / 2 + 50);
+  Graphics.set_font "-*-*-medium-r-*-*-15-*";
   Graphics.draw_string "Micro Empire";
+  Graphics.moveto ((play_area_width + sidebar_width) / 2 - 390) (play_area_height / 2 );
+  Graphics.set_font "-*-*-medium-r-*-*-13-*";
+  Graphics.draw_string "Grow as big as possible. Consume";
+  Graphics.set_color 15248896;
+  Graphics.draw_string " nutrients ";
+  Graphics.set_color 16777215;
+  Graphics.draw_string "for energy, fight";
+  Graphics.set_color 14359040;
+  Graphics.draw_string  " enemies";
+  Graphics.set_color 16777215;
+  Graphics.draw_string ". Don't run out of energy or lose a fight.";
+  Graphics.moveto ((play_area_width + sidebar_width) / 2 - 410) (play_area_height / 2 - 60);
+  Graphics.set_font "-*-*-medium-r-*-*-12-*";
+  Graphics.draw_string "TIP: Colony fights are determined by strength, size, and a bit of randomness. Make sure you're both bigger and stronger than the enemy.";
   Graphics.set_color 3319890;
-  Graphics.moveto ((play_area_width + sidebar_width) / 2 - 75) (play_area_height / 2 - 40);
-  Graphics.set_text_size 10;
+  Graphics.moveto ((play_area_width + sidebar_width) / 2 - 100) (play_area_height / 2 - 150);
+  Graphics.set_font "-*-*-medium-r-*-*-15-*";
   Graphics.draw_string "PRESS ANY KEY TO BEGIN"
 
 let render (game : Game.t) =
@@ -170,6 +184,7 @@ let render (game : Game.t) =
   in
   Graphics.set_color 0;
   Graphics.moveto (play_area_width + 20) (play_area_height - 50);
+  Graphics.set_font "-*-*-medium-r-*-*-12-*";
   List.iter text ~f:(fun str ->
       Graphics.draw_string str;
       Graphics.current_y () |> fun y ->
