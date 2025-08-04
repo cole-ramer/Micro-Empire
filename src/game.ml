@@ -373,7 +373,7 @@ module Environment = struct
         in
         (* Replaces defeated colonies *)
         let num_of_enemies_to_replace =
-          Hashtbl.length enemy_map_after_enemy_fights - Hashtbl.length enemy_map
+          Hashtbl.length enemy_map - Hashtbl.length enemy_map_after_enemy_fights
         in
         let placeholder_list = List.init num_of_enemies_to_replace ~f:Fn.id in
         List.fold placeholder_list ~init:game_after_fights
