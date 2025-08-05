@@ -12,6 +12,7 @@ type t = {
   nutrients : Position.Hash_Set.t list;
   board : Board.t;
   creation_id_generator : Creation_id.t;
+  time_of_last_move_of_enemies : (int, Time_ns.t) Hashtbl.t;
 }
 
 val handle_key : t -> char -> t option

@@ -21,6 +21,7 @@ type t = {
   nutrients : Position.Hash_Set.t list;
   board : Board.t;
   creation_id_generator : Creation_id.t;
+  time_of_last_move_of_enemies : (int, Time_ns.t) Hashtbl.t;
 }
 
 let get_empty_positions (game : t) =
@@ -166,12 +167,16 @@ module Spawning = struct
       in
       let new_enemy_id = Creation_id.next_id game.creation_id_generator in
       let _ = Hashtbl.add game.enemies ~key:new_enemy_id ~data:new_enemy in
+      Hashtbl.add_exn game.time_of_last_move_of_enemies ~key:new_enemy_id
+        ~data:(Time_ns.now ());
 
       game
 
     let enemy_replace game ~(enemy_id_to_remove : int) =
       let game_with_new_enemy = create_new_enemy game in
       Hashtbl.remove game_with_new_enemy.enemies enemy_id_to_remove;
+      Hashtbl.remove game_with_new_enemy.time_of_last_move_of_enemies
+        enemy_id_to_remove;
 
       game_with_new_enemy
   end
@@ -422,10 +427,10 @@ module Environment = struct
           : bool)];
     [%expect {| false |}]
 
-  let handle_fights_for_one_enemy_colony
-      (enemy_targets : (int, Enemy_target.t) Hashtbl.t) ~enemy_id ~enemy_colony
+  let handle_fights_for_one_enemy_colony game ~enemy_id ~enemy_colony
       (current_enemy_map : (int, Colony.t) Hashtbl.t) :
       (int, Colony.t) Hashtbl.t =
+    let enemy_targets = game.enemy_targets in
     let map_after_player_fights = Hashtbl.copy current_enemy_map in
     Hashtbl.iteri current_enemy_map ~f:(fun ~key ~data ->
         let enemy2_id = key in
@@ -445,7 +450,7 @@ module Environment = struct
             match (outer_enemy_result, inner_enemy_result) with
             | Some outer_enemy, None -> (
                 Hashtbl.remove map_after_player_fights enemy2_id;
-
+                Hashtbl.remove game.time_of_last_move_of_enemies enemy2_id;
                 Hashtbl.set map_after_player_fights ~key:enemy_id
                   ~data:outer_enemy;
                 match
@@ -464,7 +469,7 @@ module Environment = struct
                     | false -> Hashtbl.remove enemy_targets enemy2_id))
             | None, Some inner_enemy ->
                 Hashtbl.remove map_after_player_fights enemy_id;
-
+                Hashtbl.remove game.time_of_last_move_of_enemies enemy_id;
                 Hashtbl.set map_after_player_fights ~key ~data:inner_enemy
             | _, _ ->
                 raise_s
@@ -518,8 +523,8 @@ module Environment = struct
         ~f:(fun ~key ~data current_enemy_map ->
           match Hashtbl.mem current_enemy_map key with
           | true ->
-              handle_fights_for_one_enemy_colony game.enemy_targets
-                ~enemy_id:key ~enemy_colony:data current_enemy_map
+              handle_fights_for_one_enemy_colony game ~enemy_id:key
+                ~enemy_colony:data current_enemy_map
           | false -> current_enemy_map)
     in
 
@@ -592,8 +597,14 @@ module Enemy_behaviour = struct
     Hashtbl.iteri table_copy ~f:(fun ~key ~data ->
         let enemy_id = key in
         let enemy_colony = data in
-        match Random.int 5 with
-        | 0 ->
+        let time_since_last_move =
+          Time_ns.diff (Time_ns.now ())
+            (Hashtbl.find_exn game.time_of_last_move_of_enemies key)
+        in
+        match
+          Time_ns.Span.( >= ) time_since_last_move (Time_ns.Span.of_ms 500.0)
+        with
+        | true ->
             let target = Hashtbl.find_exn game.enemy_targets enemy_id in
             let direction_towards_target =
               List.random_element_exn
@@ -604,8 +615,10 @@ module Enemy_behaviour = struct
             let new_colony =
               Colony.move enemy_colony game.board direction_towards_target
             in
-            Hashtbl.set game.enemies ~key ~data:new_colony
-        | _ -> ())
+            Hashtbl.set game.enemies ~key ~data:new_colony;
+            Hashtbl.set game.time_of_last_move_of_enemies ~key
+              ~data:(Time_ns.now ())
+        | false -> ())
 end
 
 let handle_key game char =
@@ -700,6 +713,7 @@ let create ~width ~height =
       nutrients = [ Position.Hash_Set.create () ];
       board = { width; height };
       creation_id_generator;
+      time_of_last_move_of_enemies = Hashtbl.create (module Int);
     }
   in
   let new_nutrients =
