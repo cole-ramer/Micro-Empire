@@ -792,7 +792,10 @@ let handle_key game char =
           {
             game with
             game_state =
-              Game_over ("GAME OVER: No energy left", game.player.peak_size);
+              (match game.game_state with
+              | Game_over _ -> game.game_state
+              | _ ->
+                  Game_over ("GAME OVER: No energy left", game.player.peak_size));
             player = moved_colony;
           }
   in
