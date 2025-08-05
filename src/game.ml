@@ -333,11 +333,6 @@ module Environment = struct
           match
             best_distance_colony1_colony2 < current_best_total_target.distance
             && colony1.size >= colony2.size
-            || Enemy_target.Target_type.equal
-                 current_best_total_target.target_type Nutrient
-               && current_best_total_target.distance
-                  - best_distance_colony1_colony2
-                  <= colony1.size - colony2.size
           with
           | true ->
               Hashtbl.set enemy_target_map ~key:colony1_id
@@ -503,6 +498,7 @@ module Environment = struct
                   match (player_result, enemy_colony_result) with
                   | Some player, None ->
                       Hashtbl.remove enemy_colony_map_after_player_fights key;
+                      Hashtbl.remove game.time_of_last_move_of_enemies key;
                       Some player
                   | None, Some enemy -> None
                   | _, _ ->
@@ -513,6 +509,11 @@ module Environment = struct
                             "is an invalid return from Colony.fight, there \
                              must be exactly one winner"])))
     in
+    (* let enemies_with_targets = Hashtbl.keys game.time_of_last_move_of_enemies in
+    (match player_after_fights with
+    | None -> ()
+    | Some player -> print_s [%message (player.size : int)]);
+    print_s [%message (enemies_with_targets : int list)]; *)
     (* All enemy vs. enemy fights*)
     let enemy_map_after_enemy_fights =
       Hashtbl.copy enemy_colony_map_after_player_fights
@@ -606,6 +607,7 @@ module Enemy_behaviour = struct
         with
         | true ->
             let target = Hashtbl.find_exn game.enemy_targets enemy_id in
+            print_s [%message (target.target_type : Enemy_target.Target_type.t)];
             let direction_towards_target =
               List.random_element_exn
                 (Dir.possible_dir_to_reach_target
@@ -673,19 +675,15 @@ let handle_key game char =
        |> Environment.handle_fights |> upgrade_board |> evaluate)
 
 let update_environment game =
-  (* Need to fix this to work properly after handle fights, rn just goes towards nutrients*)
   let game = { game with enemy_targets = Hashtbl.create (module Int) } in
-  let game_after_fights = Environment.handle_fights game in
+  let nutrients_consumed = Environment.check_nutrient_consumptions game in
+  let game_after_fights = Environment.handle_fights nutrients_consumed in
 
-  let nutrients_consumed =
-    Environment.check_nutrient_consumptions game_after_fights
-  in
+  Enemy_behaviour.move_all_enemies game_after_fights;
 
-  Enemy_behaviour.move_all_enemies nutrients_consumed;
+  let player_after_decay = Colony.decay game_after_fights.player in
 
-  let player_after_decay = Colony.decay nutrients_consumed.player in
-
-  let game = evaluate { nutrients_consumed with player = player_after_decay } in
+  let game = evaluate { game_after_fights with player = player_after_decay } in
 
   game
 
