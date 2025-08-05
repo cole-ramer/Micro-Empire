@@ -4,12 +4,6 @@ val get_random_position_from_hash_set : Position.Hash_Set.t -> Position.t
 
 (* Will do a more a intresting grow, expanding by size_increase to adjacent positions not only
 to the intial set, but to the intermediate sets as the Position.Set.t expands*)
-val expand_randomly :
-  current_colony_locations:Position.Hash_Set.t ->
-  all_game_filled_positions:Position.Hash_Set.t ->
-  Board.t ->
-  size_increase:int ->
-  unit
 
 (* Will shrink the given Position.Set.t by removing a total of size_decrease elements.
 The elements removed are chosen at randomf from positions in the given set that when 

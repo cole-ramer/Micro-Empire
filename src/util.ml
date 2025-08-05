@@ -26,35 +26,6 @@ let get_random_position_from_hash_set (position_hash_set : Position.Hash_Set.t)
     ~finish:(fun _ ->
       raise_s [%message "Should not have gottent to finish for adding position"])
 
-let expand_randomly ~(current_colony_locations : Position.Hash_Set.t)
-    ~(all_game_filled_positions : Position.Hash_Set.t) (board : Board.t)
-    ~size_increase =
-  let new_positions = current_colony_locations in
-  let available_positions = Position.Hash_Set.create () in
-  Hash_set.iter current_colony_locations ~f:(fun colony_position ->
-      Set.iter (Position.adjacent_positions colony_position)
-        ~f:(fun adjacent_position ->
-          match
-            (not (Hash_set.mem all_game_filled_positions adjacent_position))
-            && Board.is_in_bounds board adjacent_position
-          with
-          | true -> Hash_set.add available_positions adjacent_position
-          | false -> ()));
-  List.init size_increase ~f:Fn.id
-  |> List.iter ~f:(fun _ ->
-         let pos_to_add =
-           get_random_position_from_hash_set available_positions
-         in
-         Hash_set.add new_positions pos_to_add;
-         Set.iter (Position.adjacent_positions pos_to_add)
-           ~f:(fun adjacent_position ->
-             match
-               (not (Hash_set.mem all_game_filled_positions adjacent_position))
-               && Board.is_in_bounds board adjacent_position
-             with
-             | true -> Hash_set.add available_positions adjacent_position
-             | false -> ()))
-
 (* let rec dfs (starting_position : Position.t) ~(all_positions : Position.Set.t)
     ~(marked_positions : Position.Set.t) =
   let marked_positions = Set.add marked_positions starting_position in
