@@ -422,7 +422,8 @@ module Environment = struct
           : bool)];
     [%expect {| false |}]
 
-  let handle_fights_for_one_enemy_colony enemy_targets ~enemy_id ~enemy_colony
+  let handle_fights_for_one_enemy_colony
+      (enemy_targets : (int, Enemy_target.t) Hashtbl.t) ~enemy_id ~enemy_colony
       (current_enemy_map : (int, Colony.t) Hashtbl.t) :
       (int, Colony.t) Hashtbl.t =
     let map_after_player_fights = Hashtbl.copy current_enemy_map in
@@ -442,11 +443,25 @@ module Environment = struct
               Colony.fight ~colony1:enemy_colony ~colony2:enemy2
             in
             match (outer_enemy_result, inner_enemy_result) with
-            | Some outer_enemy, None ->
+            | Some outer_enemy, None -> (
                 Hashtbl.remove map_after_player_fights enemy2_id;
 
                 Hashtbl.set map_after_player_fights ~key:enemy_id
-                  ~data:outer_enemy
+                  ~data:outer_enemy;
+                match
+                  ( Hashtbl.find enemy_targets enemy_id,
+                    Hashtbl.find enemy_targets enemy2_id )
+                with
+                | None, None -> ()
+                | Some target, None -> ()
+                | None, Some target ->
+                    Hashtbl.add_exn enemy_targets ~key:enemy_id ~data:target
+                | Some target1, Some target2 -> (
+                    match target1.distance > target2.distance with
+                    | true ->
+                        Hashtbl.set enemy_targets ~key:enemy_id ~data:target2;
+                        Hashtbl.remove enemy_targets enemy2_id
+                    | false -> Hashtbl.remove enemy_targets enemy2_id))
             | None, Some inner_enemy ->
                 Hashtbl.remove map_after_player_fights enemy_id;
 
@@ -573,20 +588,21 @@ let upgrade_board (game : t) =
 
 module Enemy_behaviour = struct
   let move_all_enemies game =
-    let table_copy = Hashtbl.copy game.enemy_targets in
+    let table_copy = Hashtbl.copy game.enemies in
     Hashtbl.iteri table_copy ~f:(fun ~key ~data ->
+        let enemy_id = key in
+        let enemy_colony = data in
         match Random.int 5 with
         | 0 ->
+            let target = Hashtbl.find_exn game.enemy_targets enemy_id in
             let direction_towards_target =
               List.random_element_exn
                 (Dir.possible_dir_to_reach_target
-                   ~source:data.closest_pos_in_source_colony
-                   ~target:data.closest_pos_in_target_colony)
+                   ~source:target.closest_pos_in_source_colony
+                   ~target:target.closest_pos_in_target_colony)
             in
             let new_colony =
-              Colony.move
-                (Hashtbl.find_exn game.enemies key)
-                game.board direction_towards_target
+              Colony.move enemy_colony game.board direction_towards_target
             in
             Hashtbl.set game.enemies ~key ~data:new_colony
         | _ -> ())
@@ -644,11 +660,13 @@ let handle_key game char =
        |> Environment.handle_fights |> upgrade_board |> evaluate)
 
 let update_environment game =
+  (* Need to fix this to work properly after handle fights, rn just goes towards nutrients*)
+  let game = { game with enemy_targets = Hashtbl.create (module Int) } in
   let game_after_fights = Environment.handle_fights game in
-  let game =
-    { game_after_fights with enemy_targets = Hashtbl.create (module Int) }
+
+  let nutrients_consumed =
+    Environment.check_nutrient_consumptions game_after_fights
   in
-  let nutrients_consumed = Environment.check_nutrient_consumptions game in
 
   Enemy_behaviour.move_all_enemies nutrients_consumed;
 
