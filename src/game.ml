@@ -626,11 +626,7 @@ end
 let handle_key game char =
   let upgrade_player upgrade =
     match Colony.upgrade game.player upgrade with
-    | Some upgraded_colony ->
-        Some
-          ({ game with player = upgraded_colony }
-          |> Environment.check_nutrient_consumptions
-          |> Environment.handle_fights |> evaluate)
+    | Some upgraded_colony -> Some { game with player = upgraded_colony }
     | None -> None
   in
   let move_player direction =
@@ -669,10 +665,7 @@ let handle_key game char =
   | 'a' -> move_player Dir.Left
   | 's' -> move_player Dir.Down
   | 'd' -> move_player Dir.Right
-  | _ ->
-      Some
-        (game |> Environment.check_nutrient_consumptions
-       |> Environment.handle_fights |> upgrade_board |> evaluate)
+  | _ -> Some game
 
 let update_environment game =
   let game = { game with enemy_targets = Hashtbl.create (module Int) } in
