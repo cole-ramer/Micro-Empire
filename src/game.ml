@@ -274,7 +274,14 @@ module Spawning = struct
       Hashtbl.remove game_with_new_enemy.time_of_last_move_of_enemies
         enemy_id_to_remove;
 
-      game_with_new_enemy
+      let enemies_to_produce =
+        (game.board.width / 6) - Hashtbl.length game.enemies
+      in
+      if enemies_to_produce > 0 then
+        let empty_list = List.init enemies_to_produce ~f:Fn.id in
+        List.fold empty_list ~init:game_with_new_enemy ~f:(fun new_game _ ->
+            create_new_enemy new_game)
+      else game_with_new_enemy
   end
 end
 
@@ -730,7 +737,7 @@ module Enemy_behaviour = struct
             (Hashtbl.find_exn game.time_of_last_move_of_enemies key)
         in
         match
-          Time_ns.Span.( >= ) time_since_last_move (Time_ns.Span.of_ms 700.0)
+          Time_ns.Span.( >= ) time_since_last_move (Time_ns.Span.of_ms 1500.0)
         with
         | true ->
             let target = Hashtbl.find_exn game.enemy_targets enemy_id in
@@ -849,7 +856,7 @@ let create ~width ~height =
     List.init 10 ~f:(fun _ -> Spawning.Nutrient.new_nutrient_positions game)
   in
   let game_with_nutrients = { game with nutrients = new_nutrients } in
-  let list_of_three = List.init 10 ~f:Fn.id in
+  let list_of_three = List.init 6 ~f:Fn.id in
 
   let game =
     List.fold list_of_three ~init:game_with_nutrients ~f:(fun updated_game _ ->
