@@ -603,7 +603,7 @@ module Enemy_behaviour = struct
             (Hashtbl.find_exn game.time_of_last_move_of_enemies key)
         in
         match
-          Time_ns.Span.( >= ) time_since_last_move (Time_ns.Span.of_ms 500.0)
+          Time_ns.Span.( >= ) time_since_last_move (Time_ns.Span.of_ms 700.0)
         with
         | true ->
             let target = Hashtbl.find_exn game.enemy_targets enemy_id in
