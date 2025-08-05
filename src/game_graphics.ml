@@ -93,17 +93,25 @@ let init_exn () =
   Graphics.auto_synchronize false;
   Game.create ~height ~width
 
-let main_menu () = 
+let close () =
+  Graphics.close_graph ();
+  only_one := false
+
+let main_menu () =
   let open Constants in
   Graphics.open_graph
     (Printf.sprintf " %dx%d" (play_area_width + sidebar_width) play_area_height);
   Graphics.set_color 0;
   Graphics.fill_rect 0 0 (play_area_width + sidebar_width) play_area_height;
   Graphics.set_color 16777215;
-  Graphics.moveto ((play_area_width + sidebar_width) / 2 - 50) (play_area_height / 2 + 50);
+  Graphics.moveto
+    (((play_area_width + sidebar_width) / 2) - 50)
+    ((play_area_height / 2) + 50);
   Graphics.set_font "-*-*-medium-r-*-*-15-*";
   Graphics.draw_string "Micro Empire";
-  Graphics.moveto ((play_area_width + sidebar_width) / 2 - 390) (play_area_height / 2 );
+  Graphics.moveto
+    (((play_area_width + sidebar_width) / 2) - 390)
+    (play_area_height / 2);
   Graphics.set_font "-*-*-medium-r-*-*-13-*";
   Graphics.draw_string "Grow as big as possible. Consume";
   Graphics.set_color 15248896;
@@ -111,14 +119,20 @@ let main_menu () =
   Graphics.set_color 16777215;
   Graphics.draw_string "for energy, fight";
   Graphics.set_color 14359040;
-  Graphics.draw_string  " enemies";
+  Graphics.draw_string " enemies";
   Graphics.set_color 16777215;
   Graphics.draw_string ". Don't run out of energy or lose a fight.";
-  Graphics.moveto ((play_area_width + sidebar_width) / 2 - 410) (play_area_height / 2 - 60);
+  Graphics.moveto
+    (((play_area_width + sidebar_width) / 2) - 410)
+    ((play_area_height / 2) - 60);
   Graphics.set_font "-*-*-medium-r-*-*-12-*";
-  Graphics.draw_string "TIP: Colony fights are determined by strength, size, and a bit of randomness. Make sure you're both bigger and stronger than the enemy.";
+  Graphics.draw_string
+    "TIP: Colony fights are determined by strength, size, and a bit of \
+     randomness. Make sure you're both bigger and stronger than the enemy.";
   Graphics.set_color 3319890;
-  Graphics.moveto ((play_area_width + sidebar_width) / 2 - 100) (play_area_height / 2 - 150);
+  Graphics.moveto
+    (((play_area_width + sidebar_width) / 2) - 100)
+    ((play_area_height / 2) - 150);
   Graphics.set_font "-*-*-medium-r-*-*-15-*";
   Graphics.draw_string "PRESS ANY KEY TO BEGIN"
 
@@ -189,25 +203,27 @@ let render (game : Game.t) =
       Graphics.draw_string str;
       Graphics.current_y () |> fun y ->
       Graphics.moveto (play_area_width + 20) (y - 25));
-  let key = [ "  NUTRIENT : "; ""; "  ENEMY BACTERIA : " ] in
-  Graphics.moveto (play_area_width + 20) 119;
-  List.iter key ~f:(fun str ->
-      Graphics.draw_string str;
-      Graphics.current_y () |> fun y ->
-      Graphics.moveto (play_area_width + 20) (y - 27));
-  Graphics.set_color 10687515;
-  Graphics.moveto (play_area_width / 2) (play_area_height - 50);
-  (match game.game_state with
-  | In_progress ->
-      if !insufficient_energy_error > 0 then
-        Graphics.draw_string "NOT ENOUGH ENERGY"
-  | Game_over (reason, peak_size) ->
-      Graphics.set_color 16777215;
-      Graphics.moveto (play_area_width / 2) (play_area_height - 50);
-      Graphics.draw_string reason;
-      Graphics.moveto ((play_area_width / 2) + 20) (play_area_height - 75);
-      Graphics.draw_string ("Peak Size: " ^ Int.to_string peak_size));
-
+  (let key = [ "  NUTRIENT : "; ""; "  ENEMY BACTERIA : " ] in
+   Graphics.moveto (play_area_width + 20) 119;
+   List.iter key ~f:(fun str ->
+       Graphics.draw_string str;
+       Graphics.current_y () |> fun y ->
+       Graphics.moveto (play_area_width + 20) (y - 27));
+   Graphics.set_color 10687515;
+   Graphics.moveto (play_area_width / 2) (play_area_height - 50);
+   match game.game_state with
+   | In_progress ->
+       if !insufficient_energy_error > 0 then
+         Graphics.draw_string "NOT ENOUGH ENERGY"
+   | Game_over (reason, peak_size) ->
+       Graphics.set_color 16777215;
+       Graphics.moveto (play_area_width / 2) (play_area_height - 50);
+       Graphics.draw_string reason;
+       Graphics.moveto ((play_area_width / 2) + 20) (play_area_height - 75);
+       Graphics.draw_string ("Peak Size: " ^ Int.to_string peak_size);
+       Graphics.moveto ((play_area_width / 2) - 10) (play_area_height - 125);
+       Graphics.set_color 3319890;
+       Graphics.draw_string "PRESS ANY KEY TO RESTART");
   Graphics.synchronize ()
 
 let read_key () =
