@@ -41,7 +41,6 @@ let add_time_to_duration_tracker ~function_name ~start_time =
   Hashtbl.set function_duration_tracker ~key:function_name
     ~data:(Time_ns.Span.( + ) time_diff current_time, current_calls + 1)
 
-(* Prints all of the functions with their name, avg run time, and total run time*)
 let print_function_duration_tracker () =
   Hashtbl.iteri function_duration_tracker ~f:(fun ~key ~data ->
       let total_time, number_of_calls = data in
@@ -56,10 +55,7 @@ let print_function_duration_tracker () =
           "function name:" function_name "avg time: " avg_time "total"
             total_time])
 
-(* Ideally only called once at beginning of the game.
-Gets all of the empty positions and filled positions
-and sets the global variables accordingly *)
-let get_empty_positions (game : t) =
+let get_empty_positions_at_start_of_game (game : t) =
   let start_time = Time_ns.now () in
   let all_positions_list =
     List.init game.board.width ~f:(fun x ->
@@ -72,23 +68,22 @@ let get_empty_positions (game : t) =
         Hash_set.union data.locations current_enemies)
   in
   let player_locations = game.player.locations in
-  let all_nutrients_set = Position.Hash_Set.create () in
-  let all_nutrients_set =
-    List.fold game.nutrients ~init:all_nutrients_set
-      ~f:(fun current_set new_set -> Hash_set.union current_set new_set)
+  let all_nutrients = Position.Hash_Set.create () in
+  let all_nutrients =
+    List.fold game.nutrients ~init:all_nutrients ~f:(fun current_set new_set ->
+        Hash_set.union current_set new_set)
   in
 
   List.iter all_positions_list ~f:(fun position ->
       match
         Hash_set.mem all_enemies position
         || Hash_set.mem player_locations position
-        || Hash_set.mem all_nutrients_set position
+        || Hash_set.mem all_nutrients position
       with
       | false -> Hash_set.add empty_positions position
       | true -> Hash_set.add filled_positions position);
   add_time_to_duration_tracker ~function_name:"get_empty_positions" ~start_time
 
-(* Takes in a game and returns it with a larger board *)
 let upgrade_board (game : t) =
   let current_board = game.board.width in
   if Colony.length game.player > current_board / 2 then
@@ -103,10 +98,8 @@ let upgrade_board (game : t) =
     }
   else game
 
-(* Takes in an old_locations positions hash_set and a new_locations hash_set.
-Updates the global varibles empty_positions and filled_positions based on
-the change in positions. Returns unit, directly changing the variables
-inside the function.*)
+(* Updates global variables based on new and old locations of
+a colony*)
 let adjust_empty_and_filled_positions ~old_locations ~new_locations =
   Hash_set.iter old_locations ~f:(fun old_location ->
       match Hash_set.mem new_locations old_location with
@@ -122,14 +115,11 @@ let adjust_empty_and_filled_positions ~old_locations ~new_locations =
           Hash_set.remove empty_positions new_location)
 
 module Spawning = struct
-  (* Takes expands the colony by size increase with positions current_colony_locations
-  to positions randomly that are adjacent to a position in current_colony_locations
-  is in the bounds of board, and is currently empty. As the positions are added
-  within the function the positions adjacent to that added positions become possible
-  new positions as function is running. Adjusts current_colony_locations, empty_positions,
-  and filled_positions directly in the function returnning *)
-  let expand_randomly ~(current_colony_locations : Position.Hash_Set.t)
-      (board : Board.t) ~size_increase =
+  (* Note: updates global empty_positions, and filled_positions
+within the function *)
+  let expand_colony_or_nutrient_cluster
+      ~(current_colony_locations : Position.Hash_Set.t) (board : Board.t)
+      ~size_increase =
     let new_positions = current_colony_locations in
     let available_positions = Position.Hash_Set.create () in
     Hash_set.iter current_colony_locations ~f:(fun colony_position ->
@@ -176,8 +166,8 @@ module Spawning = struct
       Hash_set.add inital_set starting_position;
       let start_time = Time_ns.now () in
 
-      expand_randomly ~current_colony_locations:inital_set game.board
-        ~size_increase:spawn_size;
+      expand_colony_or_nutrient_cluster ~current_colony_locations:inital_set
+        game.board ~size_increase:spawn_size;
 
       add_time_to_duration_tracker ~function_name:"expand_randomly" ~start_time;
       add_time_to_duration_tracker ~function_name:"new_nutrient_positions"
@@ -193,12 +183,14 @@ module Spawning = struct
               ( Hash_set.mem nutrient_cluster nutrient_position_to_replace,
                 Hash_set.length nutrient_cluster = 1 )
             with
-            | true, true -> new_nutrient_positions game
+            | true, true -> new_nutrient_positions game (* Respawns cluster*)
             | true, false ->
+                (* Cluster still partially alive *)
                 Hash_set.remove nutrient_cluster nutrient_position_to_replace;
                 nutrient_cluster
             | false, _ -> nutrient_cluster)
       in
+      (* Need to increase total # of nutrients*)
       let nutrients_to_produce =
         (game.board.width / 3) - List.length game.nutrients
       in
@@ -236,7 +228,8 @@ module Spawning = struct
       let inital_locations = Position.Hash_Set.create () in
       Hash_set.add inital_locations starting_position;
       let start_time_expand = Time_ns.now () in
-      expand_randomly ~current_colony_locations:inital_locations board
+      expand_colony_or_nutrient_cluster
+        ~current_colony_locations:inital_locations board
         ~size_increase:spawn_size;
       add_time_to_duration_tracker ~function_name:"expand_randomly"
         ~start_time:start_time_expand;
@@ -244,6 +237,7 @@ module Spawning = struct
         ~start_time:start_time_inital_locations
 
     let starting_level spawn_size = Random.int ((spawn_size / 10) + 1)
+    (* Note: updates empty and filled positions*)
 
     let create_new_enemy game =
       let start_time_new_enemy = Time_ns.now () in
@@ -260,7 +254,8 @@ module Spawning = struct
       Hash_set.add initial_locations starting_position;
       let spawn_size = random_enemy_spawn_size game.player.size in
       let start_time_expand = Time_ns.now () in
-      expand_randomly ~current_colony_locations:initial_locations game.board
+      expand_colony_or_nutrient_cluster
+        ~current_colony_locations:initial_locations game.board
         ~size_increase:spawn_size;
       add_time_to_duration_tracker ~function_name:"expand_randomly"
         ~start_time:start_time_expand;
@@ -283,21 +278,6 @@ module Spawning = struct
       add_time_to_duration_tracker ~function_name:"create_new_enemy"
         ~start_time:start_time_new_enemy;
       game
-
-    let enemy_replace game ~(enemy_id_to_remove : int) =
-      let game_with_new_enemy = create_new_enemy game in
-      Hashtbl.remove game_with_new_enemy.enemies enemy_id_to_remove;
-      Hashtbl.remove game_with_new_enemy.time_of_last_move_of_enemies
-        enemy_id_to_remove;
-
-      let enemies_to_produce =
-        (game.board.width / 6) - Hashtbl.length game.enemies
-      in
-      if enemies_to_produce > 0 then
-        let empty_list = List.init enemies_to_produce ~f:Fn.id in
-        List.fold empty_list ~init:game_with_new_enemy ~f:(fun new_game _ ->
-            create_new_enemy new_game)
-      else game_with_new_enemy
   end
 end
 
@@ -361,6 +341,8 @@ module Environment = struct
                         let energized_enemy = Colony.consume_nutrient data in
                         Hashtbl.set inner_game.enemies ~key
                           ~data:energized_enemy;
+                        (* If distance is 0, it will be consumed, and therefore
+                          will not be a possible target next round*)
                         ( best_nutrient_target_so_far,
                           Spawning.Nutrient.nutrient_replace inner_game
                             enemy_position )
@@ -389,7 +371,7 @@ module Environment = struct
       ~start_time;
     new_game
 
-  let colonies_overlap_and_update_targets
+  let do_colonies_overlap_and_update_colony1_targets
       (enemy_target_map : (int, Enemy_target.t) Hashtbl.t) ~(colony1 : Colony.t)
       ~(colony1_id : int) ~(colony2 : Colony.t) =
     let start_time = Time_ns.now () in
@@ -498,7 +480,7 @@ module Environment = struct
     in
     print_s
       [%message
-        (colonies_overlap_and_update_targets
+        (do_colonies_overlap_and_update_colony1_targets
            (Hashtbl.create (module Int))
            ~colony1 ~colony1_id:1 ~colony2
           : bool)];
@@ -525,7 +507,7 @@ module Environment = struct
     in
     print_s
       [%message
-        (colonies_overlap_and_update_targets
+        (do_colonies_overlap_and_update_colony1_targets
            (Hashtbl.create (module Int))
            ~colony1 ~colony1_id:1 ~colony2
           : bool)];
@@ -542,7 +524,7 @@ module Environment = struct
     in
     print_s
       [%message
-        (colonies_overlap_and_update_targets
+        (do_colonies_overlap_and_update_colony1_targets
            (Hashtbl.create (module Int))
            ~colony1 ~colony1_id:1 ~colony2
           : bool)];
@@ -553,38 +535,38 @@ module Environment = struct
     let colony2 = Colony.create_empty_colony () in
     print_s
       [%message
-        (colonies_overlap_and_update_targets
+        (do_colonies_overlap_and_update_colony1_targets
            (Hashtbl.create (module Int))
            ~colony1 ~colony1_id:1 ~colony2
           : bool)];
     [%expect {| false |}]
 
-  let handle_fights_for_one_enemy_colony game ~enemy_id ~enemy_colony
-      (current_enemy_map : (int, Colony.t) Hashtbl.t) :
-      (int, Colony.t) Hashtbl.t =
+  let handle_fights_for_one_enemy_colony game ~enemy_id
+      ~enemy_colony:enemy_colony1 (current_enemies : (int, Colony.t) Hashtbl.t)
+      : (int, Colony.t) Hashtbl.t =
     let start_time = Time_ns.now () in
     let enemy_targets = game.enemy_targets in
-    let map_after_player_fights = Hashtbl.copy current_enemy_map in
-    Hashtbl.iteri current_enemy_map ~f:(fun ~key ~data ->
+    let enemies_after_player_fights = Hashtbl.copy current_enemies in
+    Hashtbl.iteri current_enemies ~f:(fun ~key ~data ->
         let enemy2_id = key in
-        let enemy2 = data in
+        let enemy_colony2 = data in
         match
-          Hashtbl.mem map_after_player_fights enemy_id
-          && colonies_overlap_and_update_targets
-               (Hashtbl.create (module Int))
-               ~colony1:enemy_colony ~colony1_id:enemy_id ~colony2:enemy2
+          Hashtbl.mem enemies_after_player_fights enemy_id
+          && do_colonies_overlap_and_update_colony1_targets enemy_targets
+               ~colony1:enemy_colony1 ~colony1_id:enemy_id
+               ~colony2:enemy_colony2
           && not (enemy_id = enemy2_id)
         with
         | false -> ()
         | true -> (
             let outer_enemy_result, inner_enemy_result =
-              Colony.fight ~colony1:enemy_colony ~colony2:enemy2
+              Colony.fight ~colony1:enemy_colony1 ~colony2:enemy_colony2
             in
             match (outer_enemy_result, inner_enemy_result) with
             | Some outer_enemy, None -> (
-                Hashtbl.remove map_after_player_fights enemy2_id;
+                Hashtbl.remove enemies_after_player_fights enemy2_id;
                 Hashtbl.remove game.time_of_last_move_of_enemies enemy2_id;
-                Hashtbl.set map_after_player_fights ~key:enemy_id
+                Hashtbl.set enemies_after_player_fights ~key:enemy_id
                   ~data:outer_enemy;
                 match
                   ( Hashtbl.find enemy_targets enemy_id,
@@ -601,9 +583,9 @@ module Environment = struct
                         Hashtbl.remove enemy_targets enemy2_id
                     | false -> Hashtbl.remove enemy_targets enemy2_id))
             | None, Some inner_enemy ->
-                Hashtbl.remove map_after_player_fights enemy_id;
+                Hashtbl.remove enemies_after_player_fights enemy_id;
                 Hashtbl.remove game.time_of_last_move_of_enemies enemy_id;
-                Hashtbl.set map_after_player_fights ~key ~data:inner_enemy
+                Hashtbl.set enemies_after_player_fights ~key ~data:inner_enemy
             | _, _ ->
                 raise_s
                   [%message
@@ -613,7 +595,7 @@ module Environment = struct
                        exactly one winner"]));
     add_time_to_duration_tracker
       ~function_name:"handle_fights_for_one_enemy_colony" ~start_time;
-    map_after_player_fights
+    enemies_after_player_fights
 
   let handle_fights game : t =
     let start_time = Time_ns.now () in
@@ -628,8 +610,9 @@ module Environment = struct
           | None -> None
           | Some current_player -> (
               match
-                colonies_overlap_and_update_targets game.enemy_targets
-                  ~colony1:data ~colony1_id:key ~colony2:current_player
+                do_colonies_overlap_and_update_colony1_targets
+                  game.enemy_targets ~colony1:data ~colony1_id:key
+                  ~colony2:current_player
               with
               | false -> Some current_player
               | true -> (
@@ -760,7 +743,7 @@ module Enemy_behaviour = struct
 
             let direction_towards_target =
               List.random_element_exn
-                (Dir.possible_dir_to_reach_target
+                (Dir.possible_dirs_to_reach_target
                    ~source:target.closest_pos_in_source_colony
                    ~target:target.closest_pos_in_target_colony)
             in
@@ -870,7 +853,7 @@ let create ~width ~height =
       time_of_last_move_of_enemies = Hashtbl.create (module Int);
     }
   in
-  get_empty_positions game;
+  get_empty_positions_at_start_of_game game;
   let new_nutrients =
     List.init 10 ~f:(fun _ -> Spawning.Nutrient.new_nutrient_positions game)
   in

@@ -10,8 +10,11 @@ The elements removed are chosen at randomf from positions in the given set that 
 removed do not cause the set to be come disjoint. If there are not size_decrease 
 number of positiosn that if those parameters it will simply remove as many as it 
 can *)
+(* Will decrease the position_hash_set by size_decrease in a way that doesn't
+make it adisjoint*)
 val shrink_randomly :
   Position.Hash_Set.t -> size_decrease:int -> Position.Hash_Set.t
 
-val print_function_time : string -> unit
+(*prints the string given along with the diff between
+when print_time_diff is called and the Time_ns.t provided*)
 val print_time_diff : string -> Time_ns.t -> unit

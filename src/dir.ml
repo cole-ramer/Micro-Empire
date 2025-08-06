@@ -4,7 +4,8 @@ type t = Right | Left | Up | Down [@@deriving sexp]
 
 let directions_list = [ Right; Left; Up; Down ]
 
-let possible_dir_to_reach_target ~(source : Position.t) ~(target : Position.t) =
+let possible_dirs_to_reach_target ~(source : Position.t) ~(target : Position.t)
+    =
   let list_of_dirs = directions_list in
   let possible_dirs =
     List.filter list_of_dirs ~f:(fun dir ->

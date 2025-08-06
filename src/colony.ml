@@ -12,8 +12,6 @@ type t = {
 }
 [@@deriving sexp]
 
-(** Choose m numbers from 0 - n-1*)
-
 let move t (board : Board.t) (direction : Dir.t) : t =
   let move_function =
     match direction with
@@ -49,8 +47,7 @@ let get_upgrade_cost colony (upgrade : Upgrades.t) =
 let can_purchase_upgrade colony (upgrade : Upgrades.t) =
   colony.energy >= get_upgrade_cost colony upgrade
 
-(* Custom option maybe*)
-let upgrade ?(board : Board.t option) colony upgrade =
+let upgrade colony upgrade =
   match can_purchase_upgrade colony upgrade with
   | false -> None
   | true -> (
@@ -95,10 +92,7 @@ let fight ~(colony1 : t) ~(colony2 : t) : t option * t option =
     Upgrades.upgrade_effect ~size:colony2.size ~level:colony2.strength_level
       Upgrades.Strength
   in
-  let new_energy =
-    (* print_s [%message (colony1 : t) (colony2 : t)]; *)
-    colony1.energy + colony2.energy
-  in
+  let new_energy = colony1.energy + colony2.energy in
   let combined_locations = Hash_set.union colony1.locations colony2.locations in
   let new_size = Hash_set.length combined_locations in
 
@@ -190,173 +184,3 @@ let possible_upgrades colony =
 let four_by_four = Board.create ~height:4 ~width:4
 let four_by_three = Board.create ~height:3 ~width:4
 let empty_board = Board.create ~height:0 ~width:0
-
-(* let print_moved_colonies ~(original_positions : Position.Set.t)
-    ~(board : Board.t) =
-  let (orignal_colony : t) =
-    {
-      size = 0;
-      locations = original_positions;
-      energy = 0;
-      nutrient_absorption_level = 0;
-      decay_reduction_level = 0;
-      strength_level = 0;
-      movement_level = 0;
-      peak_size = 0;
-    }
-  in
-  let colony_right = move orignal_colony board Dir.Right in
-  (match colony_right with
-  | Some moved_colony ->
-      print_s
-        [%message "Colony right" (moved_colony.locations : Position.Set.t)]
-  | None -> ());
-  let colony_left = move orignal_colony board Dir.Left in
-  (match colony_left with
-  | Some moved_colony ->
-      print_s [%message "Colony left" (moved_colony.locations : Position.Set.t)]
-  | None -> ());
-  let colony_down = move orignal_colony board Dir.Down in
-  (match colony_down with
-  | Some moved_colony ->
-      print_s [%message "Colony down" (moved_colony.locations : Position.Set.t)]
-  | None -> ());
-  let colony_up = move orignal_colony board Dir.Up in
-  match colony_up with
-  | Some moved_colony ->
-      print_s [%message "Colony up" (moved_colony.locations : Position.Set.t)]
-  | None -> ()
-
-let%expect_test "plus sign only able to move right" =
-  let board = four_by_four in
-  let positions =
-    Position.Set.of_list
-      [
-        { x = 1; y = 0 };
-        { x = 0; y = 1 };
-        { x = 1; y = 1 };
-        { x = 2; y = 1 };
-        { x = 0; y = 2 };
-        { x = 1; y = 2 };
-        { x = 2; y = 2 };
-        { x = 1; y = 3 };
-      ]
-  in
-  print_moved_colonies ~original_positions:positions ~board;
-
-  [%expect
-    {|
-    ("Colony right"
-     (moved_colony.locations
-      (((x 1) (y 1)) ((x 1) (y 2)) ((x 2) (y 0)) ((x 2) (y 1)) ((x 2) (y 2))
-       ((x 2) (y 3)) ((x 3) (y 1)) ((x 3) (y 2))))) |}]
-
-let%expect_test "plus sign only able to move left" =
-  let board = four_by_four in
-  let original_positions =
-    Position.Set.of_list
-      [
-        { x = 2; y = 0 };
-        { x = 1; y = 1 };
-        { x = 2; y = 1 };
-        { x = 3; y = 1 };
-        { x = 1; y = 2 };
-        { x = 2; y = 2 };
-        { x = 3; y = 2 };
-        { x = 2; y = 3 };
-      ]
-  in
-  print_moved_colonies ~original_positions ~board;
-  [%expect
-    {|
-("Colony left"
- (moved_colony.locations
-  (((x 0) (y 1)) ((x 0) (y 2)) ((x 1) (y 0)) ((x 1) (y 1)) ((x 1) (y 2))
-   ((x 1) (y 3)) ((x 2) (y 1)) ((x 2) (y 2)))))
-|}]
-
-let%expect_test "empty set non-empty board" =
-  let board = four_by_four in
-  let original_positions = Position.Set.empty in
-  print_moved_colonies ~original_positions ~board;
-  [%expect
-    {|
-    ("Colony right" (moved_colony.locations ()))
-    ("Colony left" (moved_colony.locations ()))
-    ("Colony down" (moved_colony.locations ()))
-    ("Colony up" (moved_colony.locations ())) |}]
-
-let%expect_test "empty set empty board" =
-  let board = empty_board in
-  let original_positions = Position.Set.empty in
-  print_moved_colonies ~original_positions ~board;
-  [%expect
-    {|
-    ("Colony right" (moved_colony.locations ()))
-    ("Colony left" (moved_colony.locations ()))
-    ("Colony down" (moved_colony.locations ()))
-    ("Colony up" (moved_colony.locations ())) |}]
-
-let%expect_test "non empty set empty board" =
-  let board = empty_board in
-  let original_positions =
-    Position.Set.of_list
-      [
-        { x = 2; y = 0 };
-        { x = 1; y = 1 };
-        { x = 2; y = 1 };
-        { x = 3; y = 1 };
-        { x = 1; y = 2 };
-        { x = 2; y = 2 };
-        { x = 3; y = 2 };
-        { x = 2; y = 3 };
-      ]
-  in
-  print_moved_colonies ~original_positions ~board;
-  [%expect {||}]
-
-let%expect_test "colony only able to move down" =
-  let board = four_by_four in
-  let original_positions =
-    Position.Set.of_list
-      [
-        { x = 0; y = 0 };
-        { x = 1; y = 0 };
-        { x = 2; y = 0 };
-        { x = 3; y = 0 };
-        { x = 1; y = 1 };
-        { x = 2; y = 1 };
-      ]
-  in
-  print_moved_colonies ~original_positions ~board;
-
-  [%expect
-    {|
-("Colony down"
- (moved_colony.locations
-  (((x 0) (y 1)) ((x 1) (y 1)) ((x 1) (y 2)) ((x 2) (y 1)) ((x 2) (y 2))
-   ((x 3) (y 1)))))
-|}]
-
-let%expect_test "colony only able to move up" =
-  let board = four_by_four in
-  let original_positions =
-    Position.Set.of_list
-      [
-        { x = 1; y = 2 };
-        { x = 2; y = 2 };
-        { x = 0; y = 3 };
-        { x = 1; y = 3 };
-        { x = 2; y = 3 };
-        { x = 3; y = 3 };
-      ]
-  in
-  print_moved_colonies ~original_positions ~board;
-
-  [%expect
-    {|
-("Colony up"
- (moved_colony.locations
-  (((x 0) (y 2)) ((x 1) (y 1)) ((x 1) (y 2)) ((x 2) (y 1)) ((x 2) (y 2))
-   ((x 3) (y 2)))))
-|}] *)

@@ -1,12 +1,5 @@
 open! Core
 
-let print_function_time (message : string) =
-  let time =
-    Time_ns.to_string_abs (Time_ns.now ())
-      ~zone:(Core_private.Time_zone.of_utc_offset ~hours:(-4))
-  in
-  print_s [%message message time]
-
 let print_time_diff (message : string) (start_time : Time_ns.t) =
   let end_time = Time_ns.now () in
   let time_diff =

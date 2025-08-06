@@ -30,12 +30,11 @@ val fight : colony1:t -> colony2:t -> t option * t option
 the next level for said upgrade type can be purchased*)
 val can_purchase_upgrade : t -> Upgrades.t -> bool
 
-(*Takes in a colony and upgrade type and potentially a board.
+(*Takes in a colony and upgrade type.
 If the colony can not afford the upgrade it will return None.
 Otherwise it will return Some (colony with updated energy and upgrade level).
-NOTE FOR SIZE: size is the only upgrade that requires the Board.t
-Additonally the colony will also have an updated location set for the new cells *)
-val upgrade : ?board:Board.t -> t -> Upgrades.t -> t option
+ *)
+val upgrade : t -> Upgrades.t -> t option
 
 (* Creates a colony with an empty location set, 0 energy, size ,nutrient_absorption_level, etc*)
 val create_empty_colony : ?peak_size:int -> unit -> t
