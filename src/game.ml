@@ -197,7 +197,13 @@ within the function *)
       in
       (* Need to increase total # of nutrients*)
       let nutrients_to_produce =
-        (game.board.width / 3) - List.length game.nutrients
+        let expected_nutrients =
+          match game.difficulty with
+          | Easy -> game.board.width * 2 / 3
+          | Medium -> game.board.width / 2
+          | Hard -> game.board.width / 3
+        in
+        expected_nutrients - List.length game.nutrients
       in
       if nutrients_to_produce > 0 then (
         let empty_list = List.init nutrients_to_produce ~f:Fn.id in
@@ -876,12 +882,12 @@ let create ~width ~height ~difficulty =
   let game_with_nutrients = { game with nutrients = new_nutrients } in
 
   let num_of_enemies =
-    match game.difficulty with Easy -> 5 | Medium -> 8 | Hard -> 10
+    match game.difficulty with Easy -> 4 | Medium -> 5 | Hard -> 6
   in
-  let list_of_three = List.init num_of_enemies ~f:Fn.id in
+  let empty_list = List.init num_of_enemies ~f:Fn.id in
 
   let game =
-    List.fold list_of_three ~init:game_with_nutrients ~f:(fun updated_game _ ->
+    List.fold empty_list ~init:game_with_nutrients ~f:(fun updated_game _ ->
         Spawning.Enemy.create_new_enemy updated_game)
   in
 

@@ -14,7 +14,7 @@ module Effect = struct
     2 + int_of_float (15. *. log (float_of_int (level + 1)))
 
   let movement_cost ~size ~level =
-    let base_cost = 5.0 +. log (float_of_int (size + 1)) in
+    let base_cost = 3.0 +. log (float_of_int (size + 1)) in
     let reduction = float_of_int level *. 0.12 in
     int_of_float (base_cost *. (1.0 -. reduction))
 
