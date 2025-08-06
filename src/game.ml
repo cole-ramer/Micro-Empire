@@ -736,8 +736,14 @@ module Enemy_behaviour = struct
           Time_ns.diff (Time_ns.now ())
             (Hashtbl.find_exn game.time_of_last_move_of_enemies key)
         in
+        let speed =
+          match game.difficulty with
+          | Easy -> 1500.
+          | Medium -> 1100.
+          | Hard -> 900.
+        in
         match
-          Time_ns.Span.( >= ) time_since_last_move (Time_ns.Span.of_ms 1500.0)
+          Time_ns.Span.( >= ) time_since_last_move (Time_ns.Span.of_ms speed)
         with
         | true ->
             let target = Hashtbl.find_exn game.enemy_targets enemy_id in
@@ -771,8 +777,12 @@ let handle_key game char =
     let moved_colony = Colony.move game.player game.board direction in
     let old_player = game.player in
     let movement_cost =
-      Upgrades.upgrade_effect ~size:moved_colony.size
-        ~level:moved_colony.movement_level Upgrades.Movement
+      let skew =
+        match game.difficulty with Easy -> 0 | Medium -> 3 | Hard -> 8
+      in
+      skew
+      + Upgrades.upgrade_effect ~size:moved_colony.size
+          ~level:moved_colony.movement_level Upgrades.Movement
     in
     match movement_cost >= moved_colony.energy with
     | false ->
@@ -860,7 +870,11 @@ let create ~width ~height ~difficulty =
     List.init 10 ~f:(fun _ -> Spawning.Nutrient.new_nutrient_positions game)
   in
   let game_with_nutrients = { game with nutrients = new_nutrients } in
-  let list_of_three = List.init 6 ~f:Fn.id in
+
+  let num_of_enemies =
+    match game.difficulty with Easy -> 5 | Medium -> 8 | Hard -> 10
+  in
+  let list_of_three = List.init num_of_enemies ~f:Fn.id in
 
   let game =
     List.fold list_of_three ~init:game_with_nutrients ~f:(fun updated_game _ ->

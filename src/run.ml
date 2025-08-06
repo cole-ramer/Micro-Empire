@@ -51,7 +51,7 @@ and update_environment (game : Game.t ref) ~game_over =
           let open Async in
           game_over := true;
           Async.don't_wait_for
-            (let%bind () = Clock.after (Time_float.Span.of_sec 1.0) in
+            (let%bind () = Clock.after (Time_float.Span.of_sec 1.5) in
              let rec wait_for_key () =
                match Game_graphics.read_key () with
                | None ->
@@ -66,7 +66,7 @@ and update_environment (game : Game.t ref) ~game_over =
 
 and handle_keys (game : Game.t ref) ~game_over =
   (* Called every 0.001 seconds to check for key presses *)
-  every ~stop:game_over 0.001 ~f:(fun () ->
+  every ~stop:game_over 0.01 ~f:(fun () ->
       match Game_graphics.read_key () with
       | None -> ()
       | Some key -> (
