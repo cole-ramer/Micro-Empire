@@ -102,6 +102,7 @@ let upgrade_board (game : t) =
 (* Updates global variables based on new and old locations of
 a colony*)
 let adjust_empty_and_filled_positions ~old_locations ~new_locations =
+  let start_time = Time_ns.now () in
   Hash_set.iter old_locations ~f:(fun old_location ->
       match Hash_set.mem new_locations old_location with
       | true -> ()
@@ -113,7 +114,9 @@ let adjust_empty_and_filled_positions ~old_locations ~new_locations =
       | true -> ()
       | false ->
           Hash_set.add filled_positions new_location;
-          Hash_set.remove empty_positions new_location)
+          Hash_set.remove empty_positions new_location);
+  add_time_to_duration_tracker
+    ~function_name:"adjust_empty_and_filled_positions" ~start_time
 
 module Spawning = struct
   (* Note: updates global empty_positions, and filled_positions
@@ -778,6 +781,7 @@ module Enemy_behaviour = struct
 end
 
 let handle_key game char =
+  let start_time = Time_ns.now () in
   let upgrade_player upgrade =
     match Colony.upgrade game.player upgrade with
     | Some upgraded_colony -> Some { game with player = upgraded_colony }
@@ -820,31 +824,37 @@ let handle_key game char =
           }
   in
 
-  match char with
-  | '1' -> upgrade_player Upgrades.Strength
-  | '2' -> upgrade_player Upgrades.Movement
-  | '3' -> upgrade_player Upgrades.Nutrient_absorption
-  | '4' -> upgrade_player Upgrades.Decay_reduction
-  | 'w' -> move_player Dir.Up
-  | 'a' -> move_player Dir.Left
-  | 's' -> move_player Dir.Down
-  | 'd' -> move_player Dir.Right
-  | _ -> Some game
+  let game =
+    match char with
+    | '1' -> upgrade_player Upgrades.Strength
+    | '2' -> upgrade_player Upgrades.Movement
+    | '3' -> upgrade_player Upgrades.Nutrient_absorption
+    | '4' -> upgrade_player Upgrades.Decay_reduction
+    | 'w' -> move_player Dir.Up
+    | 'a' -> move_player Dir.Left
+    | 's' -> move_player Dir.Down
+    | 'd' -> move_player Dir.Right
+    | _ -> Some game
+  in
+  add_time_to_duration_tracker ~function_name:"handle_key" ~start_time;
+  game
 
 let update_environment game =
+  let start_time = Time_ns.now () in
   let game = { game with enemy_targets = Hashtbl.create (module Int) } in
   let nutrients_consumed = Environment.check_nutrient_consumptions game in
   let game_after_fights = Environment.handle_fights nutrients_consumed in
 
   Enemy_behaviour.move_all_enemies game_after_fights;
-
+  let decay_start = Time_ns.now () in
   let player_after_decay = Colony.decay game_after_fights.player in
+  add_time_to_duration_tracker ~function_name:"decay" ~start_time:decay_start;
   adjust_empty_and_filled_positions
     ~old_locations:game_after_fights.player.locations
     ~new_locations:player_after_decay.locations;
 
   let game = evaluate { game_after_fights with player = player_after_decay } in
-
+  add_time_to_duration_tracker ~function_name:"update_enviroment" ~start_time;
   game
 
 (*hardcoded before implementation*)
