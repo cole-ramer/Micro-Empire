@@ -24,23 +24,26 @@ type t = {
   time_of_last_move_of_enemies : (int, Time_ns.t) Hashtbl.t;
 }
 
-let function_duration_tracking : (string, Time_ns.Span.t * int) Hashtbl.t =
+(* Tracks function runtimes for optimization help*)
+let function_duration_tracker : (string, Time_ns.Span.t * int) Hashtbl.t =
   Hashtbl.create (module String)
 
+(* Global variables that are constantly updated for runtime improvment *)
 let empty_positions : Position.Hash_Set.t = Position.Hash_Set.create ()
 let filled_positions : Position.Hash_Set.t = Position.Hash_Set.create ()
 
 let add_time_to_duration_tracker ~function_name ~start_time =
   let time_diff = Time_ns.diff (Time_ns.now ()) start_time in
   let current_time, current_calls =
-    Hashtbl.find_or_add function_duration_tracking function_name
+    Hashtbl.find_or_add function_duration_tracker function_name
       ~default:(fun () -> (Time_ns.Span.of_int_ns 0, 0))
   in
-  Hashtbl.set function_duration_tracking ~key:function_name
+  Hashtbl.set function_duration_tracker ~key:function_name
     ~data:(Time_ns.Span.( + ) time_diff current_time, current_calls + 1)
 
+(* Prints all of the functions with their name, avg run time, and total run time*)
 let print_function_duration_tracker () =
-  Hashtbl.iteri function_duration_tracking ~f:(fun ~key ~data ->
+  Hashtbl.iteri function_duration_tracker ~f:(fun ~key ~data ->
       let total_time, number_of_calls = data in
       let function_name = key in
       let avg_time =
@@ -53,6 +56,9 @@ let print_function_duration_tracker () =
           "function name:" function_name "avg time: " avg_time "total"
             total_time])
 
+(* Ideally only called once at beginning of the game.
+Gets all of the empty positions and filled positions
+and sets the global variables accordingly *)
 let get_empty_positions (game : t) =
   let start_time = Time_ns.now () in
   let all_positions_list =
@@ -60,7 +66,6 @@ let get_empty_positions (game : t) =
         List.init game.board.height ~f:(fun y -> { Position.x; y }))
     |> List.concat
   in
-  (* ask tas*)
   let all_enemies =
     Hashtbl.fold game.enemies ~init:(Position.Hash_Set.create ())
       ~f:(fun ~key ~data current_enemies ->
@@ -83,6 +88,7 @@ let get_empty_positions (game : t) =
       | true -> Hash_set.add filled_positions position);
   add_time_to_duration_tracker ~function_name:"get_empty_positions" ~start_time
 
+(* Takes in a game and returns it with a larger board *)
 let upgrade_board (game : t) =
   let current_board = game.board.width in
   if Colony.length game.player > current_board / 2 then
@@ -97,36 +103,10 @@ let upgrade_board (game : t) =
     }
   else game
 
-let expand_randomly ~(current_colony_locations : Position.Hash_Set.t)
-    (board : Board.t) ~size_increase =
-  let new_positions = current_colony_locations in
-  let available_positions = Position.Hash_Set.create () in
-  Hash_set.iter current_colony_locations ~f:(fun colony_position ->
-      Set.iter (Position.adjacent_positions colony_position)
-        ~f:(fun adjacent_position ->
-          match
-            (not (Hash_set.mem filled_positions adjacent_position))
-            && Board.is_in_bounds board adjacent_position
-          with
-          | true -> Hash_set.add available_positions adjacent_position
-          | false -> ()));
-  List.init size_increase ~f:Fn.id
-  |> List.iter ~f:(fun _ ->
-         let pos_to_add =
-           Util.get_random_position_from_hash_set available_positions
-         in
-         Hash_set.add new_positions pos_to_add;
-         Hash_set.add filled_positions pos_to_add;
-         Hash_set.remove empty_positions pos_to_add;
-         Set.iter (Position.adjacent_positions pos_to_add)
-           ~f:(fun adjacent_position ->
-             match
-               (not (Hash_set.mem filled_positions adjacent_position))
-               && Board.is_in_bounds board adjacent_position
-             with
-             | true -> Hash_set.add available_positions adjacent_position
-             | false -> ()))
-
+(* Takes in an old_locations positions hash_set and a new_locations hash_set.
+Updates the global varibles empty_positions and filled_positions based on
+the change in positions. Returns unit, directly changing the variables
+inside the function.*)
 let adjust_empty_and_filled_positions ~old_locations ~new_locations =
   Hash_set.iter old_locations ~f:(fun old_location ->
       match Hash_set.mem new_locations old_location with
@@ -142,6 +122,42 @@ let adjust_empty_and_filled_positions ~old_locations ~new_locations =
           Hash_set.remove empty_positions new_location)
 
 module Spawning = struct
+  (* Takes expands the colony by size increase with positions current_colony_locations
+  to positions randomly that are adjacent to a position in current_colony_locations
+  is in the bounds of board, and is currently empty. As the positions are added
+  within the function the positions adjacent to that added positions become possible
+  new positions as function is running. Adjusts current_colony_locations, empty_positions,
+  and filled_positions directly in the function returnning *)
+  let expand_randomly ~(current_colony_locations : Position.Hash_Set.t)
+      (board : Board.t) ~size_increase =
+    let new_positions = current_colony_locations in
+    let available_positions = Position.Hash_Set.create () in
+    Hash_set.iter current_colony_locations ~f:(fun colony_position ->
+        Set.iter (Position.adjacent_positions colony_position)
+          ~f:(fun adjacent_position ->
+            match
+              (not (Hash_set.mem filled_positions adjacent_position))
+              && Board.is_in_bounds board adjacent_position
+            with
+            | true -> Hash_set.add available_positions adjacent_position
+            | false -> ()));
+    List.init size_increase ~f:Fn.id
+    |> List.iter ~f:(fun _ ->
+           let pos_to_add =
+             Util.get_random_position_from_hash_set available_positions
+           in
+           Hash_set.add new_positions pos_to_add;
+           Hash_set.add filled_positions pos_to_add;
+           Hash_set.remove empty_positions pos_to_add;
+           Set.iter (Position.adjacent_positions pos_to_add)
+             ~f:(fun adjacent_position ->
+               match
+                 (not (Hash_set.mem filled_positions adjacent_position))
+                 && Board.is_in_bounds board adjacent_position
+               with
+               | true -> Hash_set.add available_positions adjacent_position
+               | false -> ()))
+
   module Nutrient = struct
     let random_nutrient_size game =
       Float.to_int
