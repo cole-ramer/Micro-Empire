@@ -82,7 +82,7 @@ let draw_block { Position.x; y } ~board_size ?(no_decor : bool option) ~color
               decor_size ~input_color:(color + color_off))
     | _ -> ())
 
-let init_exn () =
+let init_exn difficulty =
   let open Constants in
   (* Should raise if called twice *)
   if !only_one then failwith "Can only call init_exn once" else only_one := true;
@@ -91,13 +91,13 @@ let init_exn () =
   Graphics.set_window_title "Micro Empire";
   Graphics.set_text_size (15. *. scaling_factor |> Float.iround_down_exn);
   Graphics.auto_synchronize false;
-  Game.create ~height ~width
+  Game.create ~height ~width ~difficulty
 
 let close () =
   Graphics.close_graph ();
   only_one := false
 
-let main_menu () =
+let main_menu difficulty =
   let open Constants in
   Graphics.open_graph
     (Printf.sprintf " %dx%d" (play_area_width + sidebar_width) play_area_height);
@@ -131,10 +131,20 @@ let main_menu () =
      randomness. Make sure you're both bigger and stronger than the enemy.";
   Graphics.set_color 3319890;
   Graphics.moveto
-    (((play_area_width + sidebar_width) / 2) - 100)
+    (((play_area_width + sidebar_width) / 2) - 70)
     ((play_area_height / 2) - 150);
   Graphics.set_font "-*-*-medium-r-*-*-15-*";
-  Graphics.draw_string "PRESS ANY KEY TO BEGIN"
+  Graphics.draw_string "PRESS B TO BEGIN";
+  Graphics.set_color 16777215;
+  Graphics.moveto
+    (((play_area_width + sidebar_width) / 2) - 85)
+    ((play_area_height / 2) - 220);
+  Graphics.draw_string ("Difficulty: " ^ Difficulty.to_string difficulty);
+  Graphics.set_font "-*-*-medium-r-*-*-13-*";
+  Graphics.moveto
+    (((play_area_width + sidebar_width) / 2) - 95)
+    ((play_area_height / 2) - 250);
+  Graphics.draw_string ("SPACE TO CHANGE DIFFICULTY")
 
 let render (game : Game.t) =
   block_size := 648 * 3 / 2 / game.board.width;

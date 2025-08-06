@@ -1,5 +1,7 @@
 open! Core
 
+let difficulty = ref Difficulty.Easy
+
 (* This is the core logic that actually runs the game. We have implemented all of this for
    you, but feel free to read this file as a reference. *)
 let every seconds ~f ~stop =
@@ -15,17 +17,23 @@ let every seconds ~f ~stop =
 
 let rec run () =
   Game_graphics.close ();
-  Game_graphics.main_menu ();
+  Game_graphics.main_menu !difficulty;
   let game_start = ref false in
   every ~stop:game_start 0.001 ~f:(fun () ->
       match Game_graphics.read_key () with
       | None -> ()
-      | Some _key ->
-          game_start := true;
-          start_game ())
+      | Some key -> (
+          match key with
+          | ' ' ->
+              difficulty := Difficulty.next !difficulty;
+              Game_graphics.main_menu !difficulty
+          | 'b' ->
+              game_start := true;
+              start_game ()
+          | _ -> ()))
 
 and start_game () =
-  let game : Game.t ref = ref (Game_graphics.init_exn ()) in
+  let game : Game.t ref = ref (Game_graphics.init_exn !difficulty) in
   Game_graphics.render !game;
   let game_over = ref false in
   handle_keys game ~game_over;
@@ -43,7 +51,7 @@ and update_environment (game : Game.t ref) ~game_over =
           let open Async in
           game_over := true;
           Async.don't_wait_for
-            (let%bind () = Clock.after (Time_float.Span.of_sec 2.0) in
+            (let%bind () = Clock.after (Time_float.Span.of_sec 1.0) in
              let rec wait_for_key () =
                match Game_graphics.read_key () with
                | None ->

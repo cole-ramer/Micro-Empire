@@ -13,9 +13,10 @@ type t = {
   board : Board.t;
   creation_id_generator : Creation_id.t;
   time_of_last_move_of_enemies : (int, Time_ns.t) Hashtbl.t;
+  difficulty : Difficulty.t;
 }
 
 val handle_key : t -> char -> t option
 val update_environment : t -> t
-val create : width:int -> height:int -> t
+val create : width:int -> height:int -> difficulty:Difficulty.t -> t
 val upgrade_board : t -> t

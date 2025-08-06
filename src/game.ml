@@ -22,6 +22,7 @@ type t = {
   board : Board.t;
   creation_id_generator : Creation_id.t;
   time_of_last_move_of_enemies : (int, Time_ns.t) Hashtbl.t;
+  difficulty : Difficulty.t;
 }
 
 (* Tracks function runtimes for optimization help*)
@@ -827,7 +828,7 @@ let update_environment game =
   game
 
 (*hardcoded before implementation*)
-let create ~width ~height =
+let create ~width ~height ~difficulty =
   let creation_id_generator = Creation_id.create () in
   let locations = Position.Hash_Set.create () in
   Hash_set.add locations { x = 0; y = 0 };
@@ -851,6 +852,7 @@ let create ~width ~height =
       board = { width; height };
       creation_id_generator;
       time_of_last_move_of_enemies = Hashtbl.create (module Int);
+      difficulty;
     }
   in
   get_empty_positions_at_start_of_game game;
