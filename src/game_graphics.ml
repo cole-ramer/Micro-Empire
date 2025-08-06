@@ -123,6 +123,10 @@ let main_menu difficulty =
   Graphics.set_color 16777215;
   Graphics.draw_string ". Don't run out of energy or lose a fight.";
   Graphics.moveto
+    (((play_area_width + sidebar_width) / 2) - 250)
+    (play_area_height / 2 - 20);
+  Graphics.draw_string "Use WASD to move and the number keypad to purchase mutation upgrades.";
+  Graphics.moveto
     (((play_area_width + sidebar_width) / 2) - 410)
     ((play_area_height / 2) - 60);
   Graphics.set_font "-*-*-medium-r-*-*-12-*";
@@ -144,7 +148,7 @@ let main_menu difficulty =
   Graphics.moveto
     (((play_area_width + sidebar_width) / 2) - 95)
     ((play_area_height / 2) - 250);
-  Graphics.draw_string ("SPACE TO CHANGE DIFFICULTY")
+  Graphics.draw_string "SPACE TO CHANGE DIFFICULTY"
 
 let render (game : Game.t) =
   block_size := 648 * 3 / 2 / game.board.width;

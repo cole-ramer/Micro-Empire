@@ -132,22 +132,26 @@ within the function *)
             with
             | true -> Hash_set.add available_positions adjacent_position
             | false -> ()));
-    List.init size_increase ~f:Fn.id
-    |> List.iter ~f:(fun _ ->
-           let pos_to_add =
-             Util.get_random_position_from_hash_set available_positions
-           in
-           Hash_set.add new_positions pos_to_add;
-           Hash_set.add filled_positions pos_to_add;
-           Hash_set.remove empty_positions pos_to_add;
-           Set.iter (Position.adjacent_positions pos_to_add)
-             ~f:(fun adjacent_position ->
-               match
-                 (not (Hash_set.mem filled_positions adjacent_position))
-                 && Board.is_in_bounds board adjacent_position
-               with
-               | true -> Hash_set.add available_positions adjacent_position
-               | false -> ()))
+    if Hash_set.length available_positions = 0 then ()
+    else
+      List.init size_increase ~f:Fn.id
+      |> List.iter ~f:(fun _ ->
+             if Hash_set.length available_positions = 0 then ()
+             else
+               let pos_to_add =
+                 Util.get_random_position_from_hash_set available_positions
+               in
+               Hash_set.add new_positions pos_to_add;
+               Hash_set.add filled_positions pos_to_add;
+               Hash_set.remove empty_positions pos_to_add;
+               Set.iter (Position.adjacent_positions pos_to_add)
+                 ~f:(fun adjacent_position ->
+                   match
+                     (not (Hash_set.mem filled_positions adjacent_position))
+                     && Board.is_in_bounds board adjacent_position
+                   with
+                   | true -> Hash_set.add available_positions adjacent_position
+                   | false -> ()))
 
   module Nutrient = struct
     let random_nutrient_size game =
@@ -740,7 +744,7 @@ module Enemy_behaviour = struct
           match game.difficulty with
           | Easy -> 1500.
           | Medium -> 1100.
-          | Hard -> 900.
+          | Hard -> 700.
         in
         match
           Time_ns.Span.( >= ) time_since_last_move (Time_ns.Span.of_ms speed)
@@ -778,7 +782,7 @@ let handle_key game char =
     let old_player = game.player in
     let movement_cost =
       let skew =
-        match game.difficulty with Easy -> 0 | Medium -> 3 | Hard -> 8
+        match game.difficulty with Easy -> 0 | Medium -> 2 | Hard -> 5
       in
       skew
       + Upgrades.upgrade_effect ~size:moved_colony.size
