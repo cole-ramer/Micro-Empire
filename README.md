@@ -118,11 +118,9 @@ A linux machine is required to run this game.
 <!-- CONTACT -->
 ## Contact
 
-Cole Ramer - cole.ramer@gmail.com
+Cole Ramer - cole.ramer@gmail.com - https://www.linkedin.com/in/cole-ramer
 
-Maisha (May) Takahashi - maishatakahashi@gmail.com
-
-Project Link: [https://github.com/cole-ramer/Micro-Empire/](https://github.com/cole-ramer/Micro-Empire/)
+Maisha (May) Takahashi - maishatakahashi@gmail.com - https://www.linkedin.com/in/maisha-takahashi/
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
