@@ -120,7 +120,7 @@ A linux machine is required to run this game.
 
 Cole Ramer - cole.ramer@gmail.com - https://www.linkedin.com/in/cole-ramer
 
-Maisha (May) Takahashi - maishatakahashi@gmail.com - (LinkedIn)[https://www.linkedin.com/in/maisha-takahashi/]
+Maisha (May) Takahashi - maishatakahashi@gmail.com - [LinkedIn][https://www.linkedin.com/in/maisha-takahashi/]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
