@@ -106,12 +106,12 @@ let main_menu difficulty =
   Graphics.set_color 16777215;
   Graphics.moveto
     (((play_area_width + sidebar_width) / 2) - 50)
-    ((play_area_height / 2) + 50);
+    ((play_area_height / 2) + 150);
   Graphics.set_font "-*-*-medium-r-*-*-15-*";
   Graphics.draw_string "Micro Empire";
   Graphics.moveto
     (((play_area_width + sidebar_width) / 2) - 390)
-    (play_area_height / 2);
+    (play_area_height / 2 + 100);
   Graphics.set_font "-*-*-medium-r-*-*-13-*";
   Graphics.draw_string "Grow as big as possible. Consume";
   Graphics.set_color 15248896;
@@ -124,11 +124,11 @@ let main_menu difficulty =
   Graphics.draw_string ". Don't run out of energy or lose a fight.";
   Graphics.moveto
     (((play_area_width + sidebar_width) / 2) - 250)
-    (play_area_height / 2 - 20);
+    (play_area_height / 2 + 80);
   Graphics.draw_string "Use WASD to move and the number keypad to purchase mutation upgrades.";
   Graphics.moveto
     (((play_area_width + sidebar_width) / 2) - 410)
-    ((play_area_height / 2) - 60);
+    ((play_area_height / 2) + 40);
   Graphics.set_font "-*-*-medium-r-*-*-12-*";
   Graphics.draw_string
     "TIP: Colony fights are determined by strength, size, and a bit of \
@@ -136,17 +136,17 @@ let main_menu difficulty =
   Graphics.set_color 3319890;
   Graphics.moveto
     (((play_area_width + sidebar_width) / 2) - 70)
-    ((play_area_height / 2) - 150);
+    ((play_area_height / 2) - 75);
   Graphics.set_font "-*-*-medium-r-*-*-15-*";
   Graphics.draw_string "PRESS B TO BEGIN";
   Graphics.set_color 16777215;
   Graphics.moveto
-    (((play_area_width + sidebar_width) / 2) - 85)
+    (((play_area_width + sidebar_width) / 2) - 80)
     ((play_area_height / 2) - 220);
   Graphics.draw_string ("Difficulty: " ^ Difficulty.to_string difficulty);
   Graphics.set_font "-*-*-medium-r-*-*-13-*";
   Graphics.moveto
-    (((play_area_width + sidebar_width) / 2) - 95)
+    (((play_area_width + sidebar_width) / 2) - 90)
     ((play_area_height / 2) - 250);
   Graphics.draw_string "SPACE TO CHANGE DIFFICULTY"
 

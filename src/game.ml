@@ -894,8 +894,14 @@ let create ~width ~height ~difficulty =
     }
   in
   get_empty_positions_at_start_of_game game;
+  let num_of_nutrients =
+    match game.difficulty with
+    | Easy -> game.board.width * 2 / 3
+    | Medium -> game.board.width / 2
+    | Hard -> game.board.width / 3
+  in
   let new_nutrients =
-    List.init 10 ~f:(fun _ -> Spawning.Nutrient.new_nutrient_positions game)
+    List.init num_of_nutrients ~f:(fun _ -> Spawning.Nutrient.new_nutrient_positions game)
   in
   let game_with_nutrients = { game with nutrients = new_nutrients } in
 
