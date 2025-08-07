@@ -548,12 +548,7 @@ module Environment = struct
   let handle_fights_for_one_enemy_colony game ~enemy_id
       ~enemy_colony:enemy_colony1 (current_enemies : (int, Colony.t) Hashtbl.t)
       : (int, Colony.t) Hashtbl.t =
-    let time_diff_required =
-      match game.difficulty with
-      | Easy -> Time_ns.Span.of_ms 1400.
-      | Medium -> Time_ns.Span.of_ms 1000.
-      | Hard -> Time_ns.Span.of_ms 600.
-    in
+    let time_diff_required = Time_ns.Span.of_ms 110. in
     let start_time = Time_ns.now () in
     let enemy_targets = game.enemy_targets in
     let enemies_after_player_fights = Hashtbl.copy current_enemies in
