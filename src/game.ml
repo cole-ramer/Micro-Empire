@@ -176,7 +176,8 @@ within the function *)
       let inital_set = Position.Hash_Set.create () in
       Hash_set.add inital_set starting_position;
       let start_time = Time_ns.now () in
-
+      Hash_set.remove empty_positions starting_position;
+      Hash_set.add filled_positions starting_position;
       expand_colony_or_nutrient_cluster ~current_colony_locations:inital_set
         game.board ~size_increase:spawn_size;
       let new_position_id = Creation_id.next_id game.creation_id_generator in
@@ -754,20 +755,6 @@ let evaluate game =
           { game with game_state }
       | false, false -> game)
 
-let upgrade_board (game : t) =
-  let current_board = game.board.width in
-  if Colony.length game.player > current_board / 2 then
-    {
-      game with
-      board =
-        {
-          Board.height =
-            Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
-          width = Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
-        };
-    }
-  else game
-
 module Enemy_behaviour = struct
   let move_all_enemies game =
     let start_time = Time_ns.now () in
@@ -871,7 +858,11 @@ let handle_key game char =
 
 let update_environment game =
   let start_time = Time_ns.now () in
-
+  let nutrient_positions = Hashtbl.keys game.nutrient_position_id_map in
+  print_s
+    [%message
+      (filled_positions : Position.Hash_Set.t)
+        (nutrient_positions : Position.t list)];
   let game = { game with enemy_targets = Hashtbl.create (module Int) } in
   let nutrients_consumed = Environment.check_nutrient_consumptions game in
   let game_after_fights = Environment.handle_fights nutrients_consumed in
