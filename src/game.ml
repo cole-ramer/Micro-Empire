@@ -326,60 +326,50 @@ module Environment = struct
         ~f:(fun ~key ~data current_game ->
           Hash_set.fold data.locations ~init:current_game
             ~f:(fun current_game enemy_position ->
-              let best_target_to_nutrient, game =
-                Hash_set.fold old_nutrient_locations
-                  ~init:
-                    ( {
-                        Enemy_target.closest_pos_in_source_colony =
-                          { x = -1; y = -1 };
-                        Enemy_target.closest_pos_in_target_colony =
-                          { x = -1; y = -1 };
-                        distance = Int.max_value;
-                        target_type = Nutrient;
-                      },
-                      current_game )
-                  ~f:(fun
-                      (best_nutrient_target_so_far, inner_game)
+              Hash_set.fold old_nutrient_locations ~init:current_game
+                ~f:(fun inner_game current_nutrient_position ->
+                  let current_distance =
+                    Position.get_distance enemy_position
                       current_nutrient_position
-                    ->
-                    let current_distance =
-                      Position.get_distance enemy_position
-                        current_nutrient_position
-                    in
-                    match
-                      ( current_distance,
-                        current_distance < best_nutrient_target_so_far.distance
-                      )
-                    with
-                    | 0, _ ->
-                        let energized_enemy = Colony.consume_nutrient data in
-                        Hashtbl.set inner_game.enemies ~key
-                          ~data:energized_enemy;
-                        (* If distance is 0, it will be consumed, and therefore
+                  in
+
+                  match current_distance with
+                  | 0 ->
+                      let energized_enemy = Colony.consume_nutrient data in
+                      Hashtbl.set inner_game.enemies ~key ~data:energized_enemy;
+                      (* If distance is 0, it will be consumed, and therefore
                           will not be a possible target next round*)
-                        ( best_nutrient_target_so_far,
-                          Spawning.Nutrient.nutrient_replace inner_game
-                            enemy_position )
-                    | _, true ->
-                        ( {
-                            Enemy_target.closest_pos_in_source_colony =
-                              enemy_position;
-                            closest_pos_in_target_colony =
-                              current_nutrient_position;
-                            distance = current_distance;
-                            target_type = Nutrient;
-                          },
-                          inner_game )
-                    | _, false -> (best_nutrient_target_so_far, inner_game))
-              in
-              match best_target_to_nutrient.distance = Int.max_value with
-              | true ->
-                  raise_s
-                    [%message "distance to nutirent should not be infinite"]
-              | false ->
-                  Hashtbl.set game.enemy_targets ~key
-                    ~data:best_target_to_nutrient;
-                  game))
+                      Spawning.Nutrient.nutrient_replace inner_game
+                        enemy_position
+                  | _ -> (
+                      match Hashtbl.find inner_game.enemy_targets key with
+                      | None ->
+                          Hashtbl.set inner_game.enemy_targets ~key
+                            ~data:
+                              {
+                                Enemy_target.closest_pos_in_source_colony =
+                                  enemy_position;
+                                closest_pos_in_target_colony =
+                                  current_nutrient_position;
+                                distance = current_distance;
+                                target_type = Nutrient;
+                              };
+                          inner_game
+                      | Some current_best_target ->
+                          if current_distance < current_best_target.distance
+                          then (
+                            Hashtbl.set inner_game.enemy_targets ~key
+                              ~data:
+                                {
+                                  Enemy_target.closest_pos_in_source_colony =
+                                    enemy_position;
+                                  closest_pos_in_target_colony =
+                                    current_nutrient_position;
+                                  distance = current_distance;
+                                  target_type = Nutrient;
+                                };
+                            inner_game)
+                          else inner_game))))
     in
     add_time_to_duration_tracker ~function_name:"check_nutrient_consumptions"
       ~start_time;
