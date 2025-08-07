@@ -18,7 +18,7 @@ type t = {
   game_state : Game_state.t;
   enemies : (int, Colony.t) Hashtbl.t;
   enemy_targets : (int, Enemy_target.t) Hashtbl.t;
-  board : Board.t;
+  mutable board : Board.t;
   creation_id_generator : Creation_id.t;
   nutrient_position_id_map : (Position.t, int) Hashtbl.t;
   nutrient_id_cluster_map : (int, Position.Hash_Set.t) Hashtbl.t;
@@ -91,16 +91,12 @@ let get_empty_positions_at_start_of_game (game : t) =
 let upgrade_board (game : t) =
   let current_board = game.board.width in
   if Colony.length game.player > current_board / 2 then
-    {
-      game with
-      board =
-        {
-          Board.height =
-            Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
-          width = Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
-        };
-    }
-  else game
+    game.board <-
+      {
+        Board.height = Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
+        width = Float.to_int (Int.to_float current_board *. Float.sqrt 2.);
+      }
+  else ()
 
 (* Updates global variables based on new and old locations of
 a colony*)
@@ -270,10 +266,9 @@ within the function *)
       let start_time_new_enemy = Time_ns.now () in
 
       let num_of_empty_positions = Hash_set.length empty_positions in
-      let game =
-        if num_of_empty_positions < game.player.size then upgrade_board game
-        else game
-      in
+
+      if num_of_empty_positions < game.player.size then upgrade_board game;
+
       let starting_position =
         Util.get_random_position_from_hash_set empty_positions
       in
