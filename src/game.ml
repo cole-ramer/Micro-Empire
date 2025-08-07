@@ -548,55 +548,78 @@ module Environment = struct
   let handle_fights_for_one_enemy_colony game ~enemy_id
       ~enemy_colony:enemy_colony1 (current_enemies : (int, Colony.t) Hashtbl.t)
       : (int, Colony.t) Hashtbl.t =
+    let time_diff_required =
+      match game.difficulty with
+      | Easy -> Time_ns.Span.of_ms 1400.
+      | Medium -> Time_ns.Span.of_ms 1000.
+      | Hard -> Time_ns.Span.of_ms 600.
+    in
     let start_time = Time_ns.now () in
     let enemy_targets = game.enemy_targets in
     let enemies_after_player_fights = Hashtbl.copy current_enemies in
     Hashtbl.iteri current_enemies ~f:(fun ~key ~data ->
         let enemy2_id = key in
         let enemy_colony2 = data in
+        let now = Time_ns.now () in
         match
-          Hashtbl.mem enemies_after_player_fights enemy_id
-          && do_colonies_overlap_and_update_colony1_targets enemy_targets
-               ~colony1:enemy_colony1 ~colony1_id:enemy_id
-               ~colony2:enemy_colony2
-          && not (enemy_id = enemy2_id)
+          Time_ns.Span.( >= )
+            (Time_ns.diff
+               (Hashtbl.find_exn game.time_of_last_move_of_enemies enemy_id)
+               now)
+            time_diff_required
+          || Time_ns.Span.( >= )
+               (Time_ns.diff
+                  (Hashtbl.find_exn game.time_of_last_move_of_enemies enemy2_id)
+                  now)
+               time_diff_required
         with
-        | false -> ()
         | true -> (
-            let outer_enemy_result, inner_enemy_result =
-              Colony.fight ~colony1:enemy_colony1 ~colony2:enemy_colony2
-            in
-            match (outer_enemy_result, inner_enemy_result) with
-            | Some outer_enemy, None -> (
-                Hashtbl.remove enemies_after_player_fights enemy2_id;
-                Hashtbl.remove game.time_of_last_move_of_enemies enemy2_id;
-                Hashtbl.set enemies_after_player_fights ~key:enemy_id
-                  ~data:outer_enemy;
-                match
-                  ( Hashtbl.find enemy_targets enemy_id,
-                    Hashtbl.find enemy_targets enemy2_id )
-                with
-                | None, None -> ()
-                | Some target, None -> ()
-                | None, Some target ->
-                    Hashtbl.add_exn enemy_targets ~key:enemy_id ~data:target
-                | Some target1, Some target2 -> (
-                    match target1.distance > target2.distance with
-                    | true ->
-                        Hashtbl.set enemy_targets ~key:enemy_id ~data:target2;
-                        Hashtbl.remove enemy_targets enemy2_id
-                    | false -> Hashtbl.remove enemy_targets enemy2_id))
-            | None, Some inner_enemy ->
-                Hashtbl.remove enemies_after_player_fights enemy_id;
-                Hashtbl.remove game.time_of_last_move_of_enemies enemy_id;
-                Hashtbl.set enemies_after_player_fights ~key ~data:inner_enemy
-            | _, _ ->
-                raise_s
-                  [%message
-                    (outer_enemy_result : Colony.t option)
-                      (inner_enemy_result : Colony.t option)
-                      "is an invalid return from Colony.fight, there must be \
-                       exactly one winner"]));
+            match
+              Hashtbl.mem enemies_after_player_fights enemy_id
+              && do_colonies_overlap_and_update_colony1_targets enemy_targets
+                   ~colony1:enemy_colony1 ~colony1_id:enemy_id
+                   ~colony2:enemy_colony2
+              && not (enemy_id = enemy2_id)
+            with
+            | false -> ()
+            | true -> (
+                let outer_enemy_result, inner_enemy_result =
+                  Colony.fight ~colony1:enemy_colony1 ~colony2:enemy_colony2
+                in
+                match (outer_enemy_result, inner_enemy_result) with
+                | Some outer_enemy, None -> (
+                    Hashtbl.remove enemies_after_player_fights enemy2_id;
+                    Hashtbl.remove game.time_of_last_move_of_enemies enemy2_id;
+                    Hashtbl.set enemies_after_player_fights ~key:enemy_id
+                      ~data:outer_enemy;
+                    match
+                      ( Hashtbl.find enemy_targets enemy_id,
+                        Hashtbl.find enemy_targets enemy2_id )
+                    with
+                    | None, None -> ()
+                    | Some target, None -> ()
+                    | None, Some target ->
+                        Hashtbl.add_exn enemy_targets ~key:enemy_id ~data:target
+                    | Some target1, Some target2 -> (
+                        match target1.distance > target2.distance with
+                        | true ->
+                            Hashtbl.set enemy_targets ~key:enemy_id
+                              ~data:target2;
+                            Hashtbl.remove enemy_targets enemy2_id
+                        | false -> Hashtbl.remove enemy_targets enemy2_id))
+                | None, Some inner_enemy ->
+                    Hashtbl.remove enemies_after_player_fights enemy_id;
+                    Hashtbl.remove game.time_of_last_move_of_enemies enemy_id;
+                    Hashtbl.set enemies_after_player_fights ~key
+                      ~data:inner_enemy
+                | _, _ ->
+                    raise_s
+                      [%message
+                        (outer_enemy_result : Colony.t option)
+                          (inner_enemy_result : Colony.t option)
+                          "is an invalid return from Colony.fight, there must \
+                           be exactly one winner"]))
+        | false -> ());
     add_time_to_duration_tracker
       ~function_name:"handle_fights_for_one_enemy_colony" ~start_time;
     enemies_after_player_fights
