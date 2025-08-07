@@ -111,7 +111,7 @@ let main_menu difficulty =
   Graphics.draw_string "Micro Empire";
   Graphics.moveto
     (((play_area_width + sidebar_width) / 2) - 390)
-    (play_area_height / 2 + 100);
+    ((play_area_height / 2) + 100);
   Graphics.set_font "-*-*-medium-r-*-*-13-*";
   Graphics.draw_string "Grow as big as possible. Consume";
   Graphics.set_color 15248896;
@@ -124,8 +124,9 @@ let main_menu difficulty =
   Graphics.draw_string ". Don't run out of energy or lose a fight.";
   Graphics.moveto
     (((play_area_width + sidebar_width) / 2) - 250)
-    (play_area_height / 2 + 80);
-  Graphics.draw_string "Use WASD to move and the number keypad to purchase mutation upgrades.";
+    ((play_area_height / 2) + 80);
+  Graphics.draw_string
+    "Use WASD to move and the number keypad to purchase mutation upgrades.";
   Graphics.moveto
     (((play_area_width + sidebar_width) / 2) - 410)
     ((play_area_height / 2) + 40);
@@ -164,10 +165,9 @@ let render (game : Game.t) =
       Hash_set.iter enemy.locations ~f:(fun { x; y } ->
           draw_block { x; y } ~color:10687515 ~board_size:game.board.width
             ~header:false game.player));
-  List.iter game.nutrients ~f:(fun nutrient ->
-      Hash_set.iter nutrient ~f:(fun { x; y } ->
-          draw_block { x; y } ~color:15248896 ~board_size:game.board.width
-            ~header:false game.player));
+  Hashtbl.iter_keys game.nutrient_position_id_map ~f:(fun { x; y } ->
+      draw_block { x; y } ~color:15248896 ~board_size:game.board.width
+        ~header:false game.player);
   draw_block
     { x = (play_area_width / 27) + 3; y = (play_area_height / 27) - 2 }
     ~board_size:game.board.width ~header:true ~color:1352489 game.player;

@@ -18,9 +18,10 @@ type t = {
   game_state : Game_state.t;
   enemies : (int, Colony.t) Hashtbl.t;
   enemy_targets : (int, Enemy_target.t) Hashtbl.t;
-  nutrients : Position.Hash_Set.t list;
   board : Board.t;
   creation_id_generator : Creation_id.t;
+  nutrient_position_id_map : (Position.t, int) Hashtbl.t;
+  nutrient_id_cluster_map : (int, Position.Hash_Set.t) Hashtbl.t;
   time_of_last_move_of_enemies : (int, Time_ns.t) Hashtbl.t;
   difficulty : Difficulty.t;
 }
@@ -71,8 +72,10 @@ let get_empty_positions_at_start_of_game (game : t) =
   let player_locations = game.player.locations in
   let all_nutrients = Position.Hash_Set.create () in
   let all_nutrients =
-    List.fold game.nutrients ~init:all_nutrients ~f:(fun current_set new_set ->
-        Hash_set.union current_set new_set)
+    Hashtbl.fold game.nutrient_id_cluster_map ~init:all_nutrients
+      ~f:(fun ~key ~data current_set ->
+        ignore key;
+        Hash_set.union current_set data)
   in
 
   List.iter all_positions_list ~f:(fun position ->
@@ -164,7 +167,7 @@ within the function *)
 
     let new_nutrient_positions game =
       let start_time_main = Time_ns.now () in
-
+      print_endline "in new_nutrient_positions";
       let starting_position =
         Util.get_random_position_from_hash_set empty_positions
       in
@@ -176,58 +179,67 @@ within the function *)
 
       expand_colony_or_nutrient_cluster ~current_colony_locations:inital_set
         game.board ~size_increase:spawn_size;
+      let new_position_id = Creation_id.next_id game.creation_id_generator in
+      Hashtbl.add_exn game.nutrient_id_cluster_map ~key:new_position_id
+        ~data:inital_set;
+      Hash_set.iter inital_set ~f:(fun position ->
+          match
+            Hashtbl.add game.nutrient_position_id_map ~key:position
+              ~data:new_position_id
+          with
+          | `Ok -> ()
+          | `Duplicate ->
+              raise_s
+                [%message
+                  "There should not be a duplicate position in the hash_map"]);
 
       add_time_to_duration_tracker ~function_name:"expand_randomly" ~start_time;
       add_time_to_duration_tracker ~function_name:"new_nutrient_positions"
-        ~start_time:start_time_main;
-      inital_set
+        ~start_time:start_time_main
 
     let nutrient_replace (game : t) (nutrient_position_to_replace : Position.t)
         =
       let start_time_replace = Time_ns.now () in
-      let updated_nutrients : Position.Hash_Set.t list =
-        List.map game.nutrients ~f:(fun nutrient_cluster ->
-            match
-              ( Hash_set.mem nutrient_cluster nutrient_position_to_replace,
-                Hash_set.length nutrient_cluster = 1 )
-            with
-            | true, true -> new_nutrient_positions game (* Respawns cluster*)
-            | true, false ->
-                (* Cluster still partially alive *)
-                Hash_set.remove nutrient_cluster nutrient_position_to_replace;
-                nutrient_cluster
-            | false, _ -> nutrient_cluster)
+      let nutrient_position_id =
+        Hashtbl.find_exn game.nutrient_position_id_map
+          nutrient_position_to_replace
       in
-      (* Need to increase total # of nutrients*)
-      let nutrients_to_produce =
-        let expected_nutrients =
-          match game.difficulty with
-          | Easy -> game.board.width * 2 / 3
-          | Medium -> game.board.width / 2
-          | Hard -> game.board.width / 3
-        in
-        expected_nutrients - List.length game.nutrients
+      let nutrient_cluster =
+        Hashtbl.find_exn game.nutrient_id_cluster_map nutrient_position_id
       in
-      if nutrients_to_produce > 0 then (
-        let empty_list = List.init nutrients_to_produce ~f:Fn.id in
-        let game =
-          List.fold empty_list ~init:{ game with nutrients = updated_nutrients }
-            ~f:(fun new_game _ ->
-              {
-                new_game with
-                nutrients =
-                  List.append new_game.nutrients
-                    [ new_nutrient_positions new_game ];
-              })
-        in
+      Hash_set.remove nutrient_cluster nutrient_position_to_replace;
+      Hashtbl.remove game.nutrient_position_id_map nutrient_position_to_replace;
+      Hash_set.remove filled_positions nutrient_position_to_replace;
+      Hash_set.add empty_positions nutrient_position_to_replace;
+      match Hash_set.is_empty nutrient_cluster with
+      | true ->
+          Hashtbl.remove game.nutrient_id_cluster_map nutrient_position_id;
 
-        add_time_to_duration_tracker ~function_name:"nutrient_replace"
-          ~start_time:start_time_replace;
-        game)
-      else (
-        add_time_to_duration_tracker ~function_name:"nutrient_replace"
-          ~start_time:start_time_replace;
-        { game with nutrients = updated_nutrients })
+          new_nutrient_positions game
+      | false ->
+          ();
+
+          (* Need to increase total # of nutrients*)
+          let nutrients_to_produce =
+            let expected_nutrients =
+              match game.difficulty with
+              | Easy -> game.board.width * 2 / 3
+              | Medium -> game.board.width / 2
+              | Hard -> game.board.width / 3
+            in
+            expected_nutrients - Hashtbl.length game.nutrient_position_id_map
+          in
+          if nutrients_to_produce > 0 then
+            let _ =
+              List.init nutrients_to_produce ~f:(fun num ->
+                  new_nutrient_positions game)
+            in
+
+            add_time_to_duration_tracker ~function_name:"nutrient_replace"
+              ~start_time:start_time_replace
+          else
+            add_time_to_duration_tracker ~function_name:"nutrient_replace"
+              ~start_time:start_time_replace
   end
 
   module Enemy = struct
@@ -298,53 +310,53 @@ end
 module Environment = struct
   let check_nutrient_consumptions game =
     let start_time = Time_ns.now () in
-    let old_nutrient_locations =
-      List.fold game.nutrients ~init:(Position.Hash_Set.create ())
-        ~f:(fun current_set position_set ->
-          Hash_set.union current_set position_set)
-    in
+
     (* handles consumption for the player *)
-    let new_game =
-      Hash_set.fold game.player.locations ~init:game
-        ~f:(fun current_game player_position ->
-          match Hash_set.mem old_nutrient_locations player_position with
+    let new_player =
+      Hash_set.fold game.player.locations ~init:game.player
+        ~f:(fun current_player player_position ->
+          match Hashtbl.mem game.nutrient_position_id_map player_position with
           | true ->
-              let game_with_nutrient_consumption =
-                {
-                  current_game with
-                  player = Colony.consume_nutrient current_game.player;
-                }
-              in
-              Spawning.Nutrient.nutrient_replace game_with_nutrient_consumption
-                player_position
-          | false -> current_game)
+              Spawning.Nutrient.nutrient_replace game player_position;
+              Colony.consume_nutrient current_player
+          | false -> current_player)
     in
+    let game = { game with player = new_player } in
 
     (* handles consumption for all the enemies*)
-    let new_game =
-      Hashtbl.fold (Hashtbl.copy game.enemies) ~init:new_game
-        ~f:(fun ~key ~data current_game ->
-          Hash_set.fold data.locations ~init:current_game
-            ~f:(fun current_game enemy_position ->
-              Hash_set.fold old_nutrient_locations ~init:current_game
-                ~f:(fun inner_game current_nutrient_position ->
-                  let current_distance =
-                    Position.get_distance enemy_position
-                      current_nutrient_position
-                  in
+    let old_nutrient_positions = Hashtbl.copy game.nutrient_position_id_map in
 
-                  match current_distance with
-                  | 0 ->
-                      let energized_enemy = Colony.consume_nutrient data in
-                      Hashtbl.set inner_game.enemies ~key ~data:energized_enemy;
-                      (* If distance is 0, it will be consumed, and therefore
+    Hashtbl.iteri (Hashtbl.copy game.enemies) ~f:(fun ~key ~data ->
+        Hash_set.iter data.locations ~f:(fun enemy_position ->
+            Hashtbl.iter_keys old_nutrient_positions
+              ~f:(fun current_nutrient_position ->
+                let current_distance =
+                  Position.get_distance enemy_position current_nutrient_position
+                in
+
+                match current_distance with
+                | 0 ->
+                    let energized_enemy = Colony.consume_nutrient data in
+                    Hashtbl.set game.enemies ~key ~data:energized_enemy;
+                    (* If distance is 0, it will be consumed, and therefore
                           will not be a possible target next round*)
-                      Spawning.Nutrient.nutrient_replace inner_game
-                        enemy_position
-                  | _ -> (
-                      match Hashtbl.find inner_game.enemy_targets key with
-                      | None ->
-                          Hashtbl.set inner_game.enemy_targets ~key
+                    Spawning.Nutrient.nutrient_replace game enemy_position
+                | _ -> (
+                    match Hashtbl.find game.enemy_targets key with
+                    | None ->
+                        Hashtbl.set game.enemy_targets ~key
+                          ~data:
+                            {
+                              Enemy_target.closest_pos_in_source_colony =
+                                enemy_position;
+                              closest_pos_in_target_colony =
+                                current_nutrient_position;
+                              distance = current_distance;
+                              target_type = Nutrient;
+                            }
+                    | Some current_best_target ->
+                        if current_distance < current_best_target.distance then
+                          Hashtbl.set game.enemy_targets ~key
                             ~data:
                               {
                                 Enemy_target.closest_pos_in_source_colony =
@@ -353,27 +365,12 @@ module Environment = struct
                                   current_nutrient_position;
                                 distance = current_distance;
                                 target_type = Nutrient;
-                              };
-                          inner_game
-                      | Some current_best_target ->
-                          if current_distance < current_best_target.distance
-                          then (
-                            Hashtbl.set inner_game.enemy_targets ~key
-                              ~data:
-                                {
-                                  Enemy_target.closest_pos_in_source_colony =
-                                    enemy_position;
-                                  closest_pos_in_target_colony =
-                                    current_nutrient_position;
-                                  distance = current_distance;
-                                  target_type = Nutrient;
-                                };
-                            inner_game)
-                          else inner_game))))
-    in
+                              }
+                        else ()))));
+
     add_time_to_duration_tracker ~function_name:"check_nutrient_consumptions"
       ~start_time;
-    new_game
+    game
 
   let do_colonies_overlap_and_update_colony1_targets
       (enemy_target_map : (int, Enemy_target.t) Hashtbl.t) ~(colony1 : Colony.t)
@@ -557,24 +554,25 @@ module Environment = struct
         let enemy_colony2 = data in
         let now = Time_ns.now () in
         match
-          Time_ns.Span.( >= )
-            (Time_ns.diff
-               (Hashtbl.find_exn game.time_of_last_move_of_enemies enemy_id)
-               now)
-            time_diff_required
-          || Time_ns.Span.( >= )
-               (Time_ns.diff
-                  (Hashtbl.find_exn game.time_of_last_move_of_enemies enemy2_id)
-                  now)
-               time_diff_required
+          (Hashtbl.mem enemies_after_player_fights enemy_id
+          && not (enemy_id = enemy2_id))
+          && (Time_ns.Span.( <= )
+                (Time_ns.diff
+                   (Hashtbl.find_exn game.time_of_last_move_of_enemies enemy_id)
+                   now)
+                time_diff_required
+             || Time_ns.Span.( <= )
+                  (Time_ns.diff
+                     (Hashtbl.find_exn game.time_of_last_move_of_enemies
+                        enemy2_id)
+                     now)
+                  time_diff_required)
         with
         | true -> (
             match
-              Hashtbl.mem enemies_after_player_fights enemy_id
-              && do_colonies_overlap_and_update_colony1_targets enemy_targets
-                   ~colony1:enemy_colony1 ~colony1_id:enemy_id
-                   ~colony2:enemy_colony2
-              && not (enemy_id = enemy2_id)
+              do_colonies_overlap_and_update_colony1_targets enemy_targets
+                ~colony1:enemy_colony1 ~colony1_id:enemy_id
+                ~colony2:enemy_colony2
             with
             | false -> ()
             | true -> (
@@ -585,6 +583,7 @@ module Environment = struct
                 | Some outer_enemy, None -> (
                     Hashtbl.remove enemies_after_player_fights enemy2_id;
                     Hashtbl.remove game.time_of_last_move_of_enemies enemy2_id;
+
                     Hashtbl.set enemies_after_player_fights ~key:enemy_id
                       ~data:outer_enemy;
                     match
@@ -886,7 +885,8 @@ let create ~width ~height ~difficulty =
       game_state = Game_state.In_progress;
       enemies = Hashtbl.create (module Int);
       enemy_targets = Hashtbl.create (module Int);
-      nutrients = [ Position.Hash_Set.create () ];
+      nutrient_position_id_map = Hashtbl.create (module Position);
+      nutrient_id_cluster_map = Hashtbl.create (module Int);
       board = { width; height };
       creation_id_generator;
       time_of_last_move_of_enemies = Hashtbl.create (module Int);
@@ -900,10 +900,10 @@ let create ~width ~height ~difficulty =
     | Medium -> game.board.width / 2
     | Hard -> game.board.width / 3
   in
-  let new_nutrients =
-    List.init num_of_nutrients ~f:(fun _ -> Spawning.Nutrient.new_nutrient_positions game)
+  let _ =
+    List.init num_of_nutrients ~f:(fun _ ->
+        Spawning.Nutrient.new_nutrient_positions game)
   in
-  let game_with_nutrients = { game with nutrients = new_nutrients } in
 
   let num_of_enemies =
     match game.difficulty with Easy -> 4 | Medium -> 5 | Hard -> 6
@@ -911,7 +911,7 @@ let create ~width ~height ~difficulty =
   let empty_list = List.init num_of_enemies ~f:Fn.id in
 
   let game =
-    List.fold empty_list ~init:game_with_nutrients ~f:(fun updated_game _ ->
+    List.fold empty_list ~init:game ~f:(fun updated_game _ ->
         Spawning.Enemy.create_new_enemy updated_game)
   in
 

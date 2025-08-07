@@ -9,9 +9,10 @@ type t = {
   game_state : Game_state.t;
   enemies : (int, Colony.t) Hashtbl.t;
   enemy_targets : (int, Enemy_target.t) Hashtbl.t;
-  nutrients : Position.Hash_Set.t list;
   board : Board.t;
   creation_id_generator : Creation_id.t;
+  nutrient_position_id_map : (Position.t, int) Hashtbl.t;
+  nutrient_id_cluster_map : (int, Position.Hash_Set.t) Hashtbl.t;
   time_of_last_move_of_enemies : (int, Time_ns.t) Hashtbl.t;
   difficulty : Difficulty.t;
 }
