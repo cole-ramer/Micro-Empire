@@ -853,11 +853,6 @@ let handle_key game char =
 
 let update_environment game =
   let start_time = Time_ns.now () in
-  let nutrient_positions = Hashtbl.keys game.nutrient_position_id_map in
-  print_s
-    [%message
-      (filled_positions : Position.Hash_Set.t)
-        (nutrient_positions : Position.t list)];
   let game = { game with enemy_targets = Hashtbl.create (module Int) } in
   let nutrients_consumed = Environment.check_nutrient_consumptions game in
   let game_after_fights = Environment.handle_fights nutrients_consumed in

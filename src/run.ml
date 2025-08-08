@@ -72,7 +72,7 @@ and handle_keys (game : Game.t ref) ~game_over =
       | Some key -> (
           match Game.handle_key !game key with
           | Some new_game ->
-              let new_game = Game.upgrade_board new_game in
+              Game.upgrade_board new_game;
               Game_graphics.render new_game;
               game := new_game
           | None -> Game_graphics.set_error 15))
