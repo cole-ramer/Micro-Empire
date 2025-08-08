@@ -919,5 +919,13 @@ let create ~width ~height ~difficulty =
     List.fold empty_list ~init:game ~f:(fun updated_game _ ->
         Spawning.Enemy.create_new_enemy updated_game)
   in
+  (* Artificially offsets enemy spawn time for more natural movement*)
+  Hashtbl.iter_keys game.enemies ~f:(fun enemy_id ->
+      let displacement_time = Random.float 301. |> Time_ns.Span.of_ms in
+      let current_time =
+        Hashtbl.find_exn game.time_of_last_move_of_enemies enemy_id
+      in
+      let new_time = Time_ns.add current_time displacement_time in
+      Hashtbl.set game.time_of_last_move_of_enemies ~key:enemy_id ~data:new_time);
 
   game
