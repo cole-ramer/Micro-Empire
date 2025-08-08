@@ -37,8 +37,6 @@
   <p align="center">
     Play as a bacteria colony. Collect nutrients as energy, buy upgrades and fight other colonies to grow bigger.
     <br />
-    <a href="https://github.com/cole-ramer/Micro-Empire/"><strong>Explore the docs »</strong></a>
-    <br />
     <br />
     <a href="https://youtu.be/UuVuJnlppBo">View Demo</a>
     &middot;
@@ -67,6 +65,7 @@
         <li><a href="#installation">Installation</a></li>
       </ul>
     <li><a href="#contact">Contact</a></li>
+    <li><a href="#about-the-code">About The Code</a></li>
   </ol>
 </details>
 
@@ -123,6 +122,20 @@ Cole Ramer - cole.ramer@gmail.com - [LinkedIn](https://www.linkedin.com/in/cole-
 Maisha (May) Takahashi - maishatakahashi@gmail.com - [LinkedIn](https://www.linkedin.com/in/maisha-takahashi/)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+<!-- ABOUT THE CODE -->
+## About the Code
+
+<div align="center">
+  <h3>Sequence Diagram</h3>
+
+  ![Sequence Diagram](./images/sequence.png)
+
+  <h3>Code Structure</h3>
+  
+  ![Code Structure](images/structure.png)
+</div>
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
