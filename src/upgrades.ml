@@ -35,7 +35,7 @@ module Effect = struct
     |> Int.of_float
 
   let get_decay_amount ~size ~level =
-    let base = 1.1 in
+    let base = 1.05 in
     let exponent = Float.of_int size *. ((10. -. Float.of_int level) /. 10.) in
     let amount =
       match
@@ -70,14 +70,13 @@ let upgrade_cost ~(level : int) (upgrade : t) =
 let upgrade_effect ~level ?size (upgrade : t) =
   match (upgrade, size) with
   | Nutrient_absorption, None -> Effect.nutrient_absorption_gain level
-  | Decay_reduction, Some s ->
-      Effect.get_decay_amount ~size:s ~level
+  | Decay_reduction, Some s -> Effect.get_decay_amount ~size:s ~level
   | Movement, Some s -> Effect.movement_cost ~size:s ~level
   | Strength, Some s -> Effect.get_strength_power ~size:s ~level
-  | _, _->
+  | _, _ ->
       raise_s
         [%message
-            (size : int option)
+          (size : int option)
             (upgrade : t)
             "invalid arguments to upgrade effect. Getting effect for size \
              increase should only pass in the size optional argument. Getting \
