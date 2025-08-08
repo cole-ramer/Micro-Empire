@@ -43,26 +43,29 @@ and update_environment (game : Game.t ref) ~game_over =
   (* Called every 0.1 seconds to step the game and render *)
   every ~stop:game_over 0.1 ~f:(fun () ->
       Game_graphics.fade_error_message ();
-      let new_game = Game.update_environment !game in
-      Game_graphics.render new_game;
-      game := new_game;
-      match (new_game.game_state : Game_state.t) with
-      | Game_over _ ->
-          let open Async in
-          game_over := true;
-          Async.don't_wait_for
-            (let%bind () = Clock.after (Time_float.Span.of_sec 1.5) in
-             let rec wait_for_key () =
-               match Game_graphics.read_key () with
-               | None ->
-                   let%bind () =
-                     Async.Clock.after (Time_float.Span.of_sec 0.001)
-                   in
-                   wait_for_key ()
-               | Some _key -> return (run ())
-             in
-             wait_for_key ())
-      | In_progress -> ())
+      let new_game, updated = Game.update_environment !game in
+      match updated with
+      | false -> ()
+      | true -> (
+          Game_graphics.render new_game;
+          game := new_game;
+          match (new_game.game_state : Game_state.t) with
+          | Game_over _ ->
+              let open Async in
+              game_over := true;
+              Async.don't_wait_for
+                (let%bind () = Clock.after (Time_float.Span.of_sec 1.5) in
+                 let rec wait_for_key () =
+                   match Game_graphics.read_key () with
+                   | None ->
+                       let%bind () =
+                         Async.Clock.after (Time_float.Span.of_sec 0.001)
+                       in
+                       wait_for_key ()
+                   | Some _key -> return (run ())
+                 in
+                 wait_for_key ())
+          | In_progress -> ()))
 
 and handle_keys (game : Game.t ref) ~game_over =
   (* Called every 0.001 seconds to check for key presses *)
@@ -71,8 +74,9 @@ and handle_keys (game : Game.t ref) ~game_over =
       | None -> ()
       | Some key -> (
           match Game.handle_key !game key with
-          | Some new_game ->
+          | Some new_game, true ->
               Game.upgrade_board new_game;
               Game_graphics.render new_game;
               game := new_game
-          | None -> Game_graphics.set_error 15))
+          | Some new_game, false -> ()
+          | None, _ -> Game_graphics.set_error 15))

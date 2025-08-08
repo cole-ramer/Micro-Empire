@@ -17,7 +17,7 @@ type t = {
   difficulty : Difficulty.t;
 }
 
-val handle_key : t -> char -> t option
-val update_environment : t -> t
+val handle_key : t -> char -> t option * bool
+val update_environment : t -> t * bool
 val create : width:int -> height:int -> difficulty:Difficulty.t -> t
 val upgrade_board : t -> unit

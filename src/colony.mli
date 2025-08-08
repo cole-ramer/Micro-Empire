@@ -44,7 +44,7 @@ val consume_nutrient : t -> t
 
 (* Decays the colony, randomly removing a number of cells (will often be 0)
 influnced by the size and decay reduction level of the colony*)
-val decay : t -> t
+val decay : t -> t * bool
 
 (* Gets position that is in the center of the colonies extremas.
 i.e. center = (x_max + x_min) / 2, (y_max + y_min) / 2*)

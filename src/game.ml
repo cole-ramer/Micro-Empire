@@ -306,7 +306,7 @@ end
 module Environment = struct
   let check_nutrient_consumptions game =
     let start_time = Time_ns.now () in
-
+    let is_updated = ref false in
     (* handles consumption for the player *)
     let new_player =
       Hash_set.fold game.player.locations ~init:game.player
@@ -314,6 +314,7 @@ module Environment = struct
           match Hashtbl.mem game.nutrient_position_id_map player_position with
           | true ->
               Spawning.Nutrient.nutrient_replace game player_position;
+              is_updated := true;
               Colony.consume_nutrient current_player
           | false -> current_player)
     in
@@ -346,6 +347,7 @@ module Environment = struct
 
                         match current_distance with
                         | 0 ->
+                            is_updated := true;
                             let energized_enemy =
                               Colony.consume_nutrient data
                             in
@@ -371,7 +373,8 @@ module Environment = struct
                                 if
                                   current_distance
                                   < current_best_target.distance
-                                then
+                                then (
+                                  is_updated := true;
                                   Hashtbl.set game.enemy_targets ~key
                                     ~data:
                                       {
@@ -382,14 +385,14 @@ module Environment = struct
                                           current_nutrient_position;
                                         distance = current_distance;
                                         target_type = Nutrient;
-                                      }
+                                      })
                                 else ()))
                     | false -> ()))
         | false -> ());
 
     add_time_to_duration_tracker ~function_name:"check_nutrient_consumptions"
       ~start_time;
-    game
+    (game, is_updated)
 
   let do_colonies_overlap_and_update_colony1_targets
       (enemy_target_map : (int, Enemy_target.t) Hashtbl.t) ~(colony1 : Colony.t)
@@ -637,10 +640,10 @@ module Environment = struct
       ~function_name:"handle_fights_for_one_enemy_colony" ~start_time;
     enemies_after_player_fights
 
-  let handle_fights game : t =
+  let handle_fights game : t * bool =
     let start_time = Time_ns.now () in
     let enemy_map = game.enemies in
-
+    let is_updated = ref false in
     (* Player vs Enemy fights*)
     let enemy_colony_map_after_player_fights = Hashtbl.copy enemy_map in
     let player_after_fights =
@@ -656,6 +659,7 @@ module Environment = struct
               with
               | false -> Some current_player
               | true -> (
+                  is_updated := true;
                   let player_result, enemy_colony_result =
                     Colony.fight ~colony1:current_player ~colony2:data
                   in
@@ -692,18 +696,23 @@ module Environment = struct
                 ~enemy_colony:data current_enemy_map
           | false -> current_enemy_map)
     in
+    is_updated :=
+      !is_updated
+      || Hashtbl.length enemy_map_after_enemy_fights
+         = Hashtbl.length enemy_colony_map_after_player_fights;
 
     match player_after_fights with
     | None ->
         print_function_duration_tracker ();
-        {
-          game with
-          game_state =
-            Game_state.Game_over ("You lost the fight", game.player.peak_size);
-          enemies = enemy_map_after_enemy_fights;
-          player =
-            Colony.create_empty_colony ~peak_size:game.player.peak_size ();
-        }
+        ( {
+            game with
+            game_state =
+              Game_state.Game_over ("You lost the fight", game.player.peak_size);
+            enemies = enemy_map_after_enemy_fights;
+            player =
+              Colony.create_empty_colony ~peak_size:game.player.peak_size ();
+          },
+          !is_updated )
     | Some player ->
         let game_after_fights =
           { game with enemies = enemy_map_after_enemy_fights; player }
@@ -719,7 +728,7 @@ module Environment = struct
               Spawning.Enemy.create_new_enemy current_game)
         in
         add_time_to_duration_tracker ~function_name:"handle_fights" ~start_time;
-        game
+        (game, !is_updated)
 end
 
 let evaluate game =
@@ -754,6 +763,7 @@ module Enemy_behaviour = struct
   let move_all_enemies game =
     let start_time = Time_ns.now () in
     let table_copy = Hashtbl.copy game.enemies in
+    let is_updated = ref false in
     Hashtbl.iteri table_copy ~f:(fun ~key ~data ->
         let enemy_id = key in
         let enemy_colony = data in
@@ -771,6 +781,7 @@ module Enemy_behaviour = struct
           Time_ns.Span.( >= ) time_since_last_move (Time_ns.Span.of_ms speed)
         with
         | true ->
+            is_updated := true;
             let target = Hashtbl.find_exn game.enemy_targets enemy_id in
 
             let direction_towards_target =
@@ -789,7 +800,8 @@ module Enemy_behaviour = struct
             Hashtbl.set game.time_of_last_move_of_enemies ~key
               ~data:(Time_ns.now ())
         | false -> ());
-    add_time_to_duration_tracker ~function_name:"move_all_enemies" ~start_time
+    add_time_to_duration_tracker ~function_name:"move_all_enemies" ~start_time;
+    !is_updated
 end
 
 let handle_key game char =
@@ -818,10 +830,12 @@ let handle_key game char =
 
         adjust_empty_and_filled_positions ~old_locations:old_player.locations
           ~new_locations:moved_colony.locations;
-        Some
-          ({ game with player = moved_colony }
-          |> Environment.check_nutrient_consumptions
-          |> Environment.handle_fights |> evaluate)
+        let game = { game with player = moved_colony } in
+        let game, _ = Environment.check_nutrient_consumptions game in
+        let game, _ = Environment.handle_fights game in
+        let game = evaluate game in
+
+        Some game
     | true ->
         let moved_colony = { moved_colony with energy = 0 } in
         Some
@@ -836,30 +850,38 @@ let handle_key game char =
           }
   in
 
-  let game =
+  let game, updated =
     match char with
-    | '1' -> upgrade_player Upgrades.Strength
-    | '2' -> upgrade_player Upgrades.Movement
-    | '3' -> upgrade_player Upgrades.Nutrient_absorption
-    | '4' -> upgrade_player Upgrades.Decay_reduction
-    | 'w' -> move_player Dir.Up
-    | 'a' -> move_player Dir.Left
-    | 's' -> move_player Dir.Down
-    | 'd' -> move_player Dir.Right
-    | _ -> Some game
+    | '1' -> (upgrade_player Upgrades.Strength, true)
+    | '2' -> (upgrade_player Upgrades.Movement, true)
+    | '3' -> (upgrade_player Upgrades.Nutrient_absorption, true)
+    | '4' -> (upgrade_player Upgrades.Decay_reduction, true)
+    | 'w' -> (move_player Dir.Up, true)
+    | 'a' -> (move_player Dir.Left, true)
+    | 's' -> (move_player Dir.Down, true)
+    | 'd' -> (move_player Dir.Right, true)
+    | _ -> (Some game, false)
   in
   add_time_to_duration_tracker ~function_name:"handle_key" ~start_time;
-  game
+  (game, updated)
 
 let update_environment game =
   let start_time = Time_ns.now () in
+  let changed_this_run = ref false in
   let game = { game with enemy_targets = Hashtbl.create (module Int) } in
-  let nutrients_consumed = Environment.check_nutrient_consumptions game in
-  let game_after_fights = Environment.handle_fights nutrients_consumed in
-
-  Enemy_behaviour.move_all_enemies game_after_fights;
+  let nutrients_consumed, is_updated =
+    Environment.check_nutrient_consumptions game
+  in
+  changed_this_run := !is_updated || !changed_this_run;
+  let game_after_fights, is_updated =
+    Environment.handle_fights nutrients_consumed
+  in
+  changed_this_run := !changed_this_run || is_updated;
+  let is_updated = Enemy_behaviour.move_all_enemies game_after_fights in
+  changed_this_run := is_updated || !changed_this_run;
   let decay_start = Time_ns.now () in
-  let player_after_decay = Colony.decay game_after_fights.player in
+  let player_after_decay, is_updated = Colony.decay game_after_fights.player in
+  changed_this_run := is_updated || !changed_this_run;
   add_time_to_duration_tracker ~function_name:"decay" ~start_time:decay_start;
   adjust_empty_and_filled_positions
     ~old_locations:game_after_fights.player.locations
@@ -867,7 +889,7 @@ let update_environment game =
 
   let game = evaluate { game_after_fights with player = player_after_decay } in
   add_time_to_duration_tracker ~function_name:"update_enviroment" ~start_time;
-  game
+  (game, !changed_this_run)
 
 (*hardcoded before implementation*)
 let create ~width ~height ~difficulty =
